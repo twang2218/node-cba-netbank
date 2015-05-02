@@ -7,6 +7,8 @@ node-cba-netbank
 [![Dependency Status][dependency-image]][dependency-url]
 [![Coverage Status][coverage-image]][coverage-url]
 
+[![NPM][npm-classy-badge-image]][npm-classy-badge-url]
+
 Unofficial The Commonwealth Bank of Australia NetBank API wrap for
 Node.js
 
@@ -167,6 +169,8 @@ The test will try to login and get transactions from the first account, and if i
 [npm-url]: https://npmjs.org/package/node-cba-netbank
 [npm-version-image]: http://img.shields.io/npm/v/node-cba-netbank.svg?style=flat
 [npm-downloads-image]: http://img.shields.io/npm/dm/node-cba-netbank.svg?style=flat
+[npm-classy-badge-image]: https://nodei.co/npm/node-cba-netbank.png?downloads=true&downloadRank=true&stars=true
+[npm-classy-badge-url]: https://nodei.co/npm/node-cba-netbank/
 
 [travis-url]: http://travis-ci.org/twang2218/node-cba-netbank
 [travis-image]: http://img.shields.io/travis/twang2218/node-cba-netbank/develop.svg?style=flat
