@@ -5,7 +5,7 @@ var fs = require('fs');
 var api = require('../lib/api');
 
 //	ignore the real world testing if there is no credential file.
-if (fs.existsSync('./auth.json')) {
+if (fs.existsSync(__dirname + '/auth.json')) {
 	// Test Credential
 	var credential = require('./auth');
 
