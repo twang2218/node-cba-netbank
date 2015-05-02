@@ -1,6 +1,8 @@
 node-cba-netbank
 ================
 
+[![Build Status](https://travis-ci.org/twang2218/node-cba-netbank.svg?branch=master)](https://travis-ci.org/twang2218/node-cba-netbank)
+
 Unofficial The Commonwealth Bank of Australia NetBank API wrap for
 Node.js
 
@@ -137,7 +139,7 @@ For each transaction:
 Testing
 -------
 
-Before run test, please put a JSON file, ```auth.json``` under ```./test/``` directory, and put content of real credential information in it:
+To enable real world testing, please put a JSON file, ```auth.json``` under ```./test/``` directory, and put content of real credential information in it:
 
 ```js
 {
