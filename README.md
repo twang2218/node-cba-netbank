@@ -173,7 +173,7 @@ The test will try to login and get transactions from the first account, and if i
 [npm-classy-badge-url]: https://nodei.co/npm/node-cba-netbank/
 
 [travis-url]: http://travis-ci.org/twang2218/node-cba-netbank
-[travis-image]: http://img.shields.io/travis/twang2218/node-cba-netbank/develop.svg?style=flat
+[travis-image]: http://img.shields.io/travis/twang2218/node-cba-netbank.svg?style=flat
 
 [dependency-url]: https://gemnasium.com/twang2218/node-cba-netbank
 [dependency-image]: http://img.shields.io/gemnasium/twang2218/node-cba-netbank.svg
