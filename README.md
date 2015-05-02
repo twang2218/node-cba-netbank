@@ -82,19 +82,22 @@ For each account:
  netbank.login(credential, function (error, accounts) {
    if (error === null) {
      // Assume we are going to retrieve the transactions of the first account
-     netbank.getTransactions(accountList[0], function (error, transactions) {
+     netbank.getTransactions(accounts[0], function (error, transactions) {
        if (error === null) {
          // output the transactions to console, be aware, it might be a lot.
          console.log(transactions);
        } else {
          console.error(error);
        }
+     });
    } else {
      console.error(error);
    }
  });
 
  ```
+
+ **Be aware, it might take several minutes if there are thousands transactions.**
 
  The transaction list will look like below:
 
@@ -146,4 +149,4 @@ Then run command:
 npm test
 ```
 
-The test will try to login and get transactions from the first account, and if it will fail if the retrieved transactions number is less than 1000. It's ok if you don't have that much transactions in the account. The purpose of checking whether it get more than 1000 transactions is to check whether it can overcome the maximum transactions limits. 
+The test will try to login and get transactions from the first account, and if it will fail if the retrieved transactions number is less than 1000. It's ok if you don't have that much transactions in the account. The purpose of checking whether it get more than 1000 transactions is to check whether it can overcome the maximum transactions limits.
