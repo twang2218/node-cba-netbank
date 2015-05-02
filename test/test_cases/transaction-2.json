@@ -1,0 +1,54 @@
+{
+	"Date": {
+		"Sort": [635520384000000000, "201411200816413066111"],
+		"Text": "20 Nov 2014"
+	},
+	"MonthYear": {
+		"Text": "112014"
+	},
+	"WebSearch": null,
+	"Description": {
+		"Url": "/netbank/TransactionHistory/Details.aspx?ACCOUNT_PRODUCT_TYPE=DDA&IsMisa=False&_e=RG9nIGdvZXMgd29vZg0KQ2F0IGdvZXMgbWVvdw0KQmlyZCBnb2VzIHR3ZWV0DQpBbmQgbW91c2UgZ29lcyBzcXVlYWsNCkNvdyBnb2VzIG1vbw0KRnJvZyBnb2VzIGNyb2FrDQpBbmQgdGhlIGVsZXBoYW50IGdvZXMgdG9vdA%3D%3D&RID=Qs3uTcaN80GwIHC7dp31uQ&SID=M9JfKqQ0iKY%3d",
+		"Sort": ["transfer to xx1060 commbank app", -635520384000000000],
+		"Text": "Transfer to xx1060 CommBank app"
+	},
+	"SortableDebit": {
+		"Sort": [1, 100.00],
+		"Text": "$100.00 DR"
+	},
+	"SortableCredit": {
+		"Sort": [0, 0],
+		"Text": ""
+	},
+	"SortableAmount": {
+		"Sort": [1, 100.00],
+		"Text": "$100.00 DR"
+	},
+	"SortableCurrencyAmount": {
+		"Sort": [2, 20.67],
+		"Text": "$20.67 CR"
+	},
+	"Debit": {
+		"Text": "$100.00 DR"
+	},
+	"Credit": {
+		"Text": ""
+	},
+	"Amount": {
+		"Text": "$100.00 DR"
+	},
+	"Balance": {
+		"Text": "$20.67 CR"
+	},
+	"FeeLink": {
+		"Text": "",
+		"Url": null,
+		"Type": ""
+	},
+	"TranCode": {
+		"Text": "550085"
+	},
+	"ReceiptNumber": {
+		"Text": "N112044272766"
+	}
+}

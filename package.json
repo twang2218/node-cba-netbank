@@ -1,0 +1,47 @@
+{
+	"name": "node-cba-netbank",
+	"version": "0.0.1",
+	"description": "Unofficial Commonwealth Bank Australia Netbank API Wrapper for Node.js",
+	"main": "lib/index.js",
+	"dependencies": {
+		"cheerio": "^0.19.0",
+		"moment": "^2.10.2",
+		"request": "^2.55.0",
+		"string": "^3.1.1"
+	},
+	"directories": {
+		"lib": "./lib"
+	},
+	"devDependencies": {
+		"chai": "^2.3.0",
+		"istanbul": "^0.3.13",
+		"jscs": "^1.13.0",
+		"jshint": "^2.7.0",
+		"jshint-full-path": "^1.1.1",
+		"mocha": "^2.2.4",
+		"nock": "^1.7.1"
+	},
+	"scripts": {
+		"lint": "./node_modules/.bin/jshint . --reporter=./node_modules/jshint-full-path/index.js",
+		"checkStyle": "./node_modules/.bin/jscs .",
+		"pretest": "npm run-script lint && npm run-script checkStyle",
+		"test": "./node_modules/.bin/istanbul cover ./node_modules/.bin/_mocha -- --recursive -R spec",
+		"posttest": "./node_modules/.bin/istanbul check-coverage"
+	},
+	"repository": {
+		"type": "git",
+		"url": "git@github.com:twang2218/node-cba-netbank.git"
+	},
+	"keywords": [
+		"api",
+		"netbank",
+		"cba",
+		"commonwealth bank australia"
+	],
+	"author": "Tao Wang <twang2218@gmail.com>",
+	"license": "Apache-2.0",
+	"bugs": {
+		"url": "https://github.com/twang2218/node-cba-netbank/issues"
+	},
+	"homepage": "https://github.com/twang2218/node-cba-netbank"
+}

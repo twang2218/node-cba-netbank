@@ -1,0 +1,54 @@
+{
+  "Date": {
+    "Sort": [635529888000000000, "201411302026194883471"],
+    "Text": "01 Dec 2014"
+  },
+  "MonthYear": {
+    "Text": "122014"
+  },
+  "WebSearch": null,
+  "Description": {
+    "Url": "",
+    "Sort": ["credit interest", -635529888000000000],
+    "Text": "Credit Interest"
+  },
+  "SortableDebit": {
+    "Sort": [0, 0],
+    "Text": ""
+  },
+  "SortableCredit": {
+    "Sort": [2, 0.01],
+    "Text": "$0.01 CR"
+  },
+  "SortableAmount": {
+    "Sort": [2, 0.01],
+    "Text": "$0.01 CR"
+  },
+  "SortableCurrencyAmount": {
+    "Sort": [2, 5.68],
+    "Text": "$5.68 CR"
+  },
+  "Debit": {
+    "Text": ""
+  },
+  "Credit": {
+    "Text": "$0.01 CR"
+  },
+  "Amount": {
+    "Text": "$0.01 CR"
+  },
+  "Balance": {
+    "Text": "$5.68 CR"
+  },
+  "FeeLink": {
+    "Text": "",
+    "Url": null,
+    "Type": ""
+  },
+  "TranCode": {
+    "Text": "700000"
+  },
+  "ReceiptNumber": {
+    "Text": ""
+  }
+}

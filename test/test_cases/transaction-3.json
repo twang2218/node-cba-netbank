@@ -1,0 +1,58 @@
+{
+	"Date": {
+		"Sort": [635655168000000000, "000000000000000000003"],
+		"Text": "25 Apr 2015"
+	},
+	"MonthYear": {
+		"Text": "042015"
+	},
+	"WebSearch": {
+		"Text": "",
+		"Url": "MCC",
+		"Type": ""
+	},
+	"Description": {
+		"Url": "/netbank/TransactionHistory/MerchantDetails.aspx?RID=Id0RboN-VUGkvNYJjWex6A&SID=9j3x0nrpJHI%3d&OD=DAMS+APPLE+AT+THE+STAT+++HURSTVILLE&MId=5411",
+		"Sort": ["dams apple at the stat   hurstville", -635655168000000000],
+		"Text": "DAMS APPLE AT THE STAT   HURSTVILLE"
+	},
+	"SortableDebit": {
+		"Sort": [1, 19.72],
+		"Text": "$19.72 DR"
+	},
+	"SortableCredit": {
+		"Sort": [0, 0],
+		"Text": ""
+	},
+	"SortableAmount": {
+		"Sort": [1, 19.72],
+		"Text": "$19.72 DR"
+	},
+	"SortableCurrencyAmount": {
+		"Sort": [1, 0],
+		"Text": ""
+	},
+	"Debit": {
+		"Text": "$19.72 DR"
+	},
+	"Credit": {
+		"Text": ""
+	},
+	"Amount": {
+		"Text": "$19.72 DR"
+	},
+	"Balance": {
+		"Text": ""
+	},
+	"FeeLink": {
+		"Text": "",
+		"Url": null,
+		"Type": ""
+	},
+	"TranCode": {
+		"Text": "00 05"
+	},
+	"ReceiptNumber": {
+		"Text": null
+	}
+}
