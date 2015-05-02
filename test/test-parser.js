@@ -18,7 +18,7 @@ describe('parser.js', function () {
 		//  login page
 		pages.login = load('01-login-page.html');
 		//  account list page
-		pages.accountList = load('02-first-page.html');
+		pages.homePage = load('02-home-page.html');
 		//  transactions page
 		pages.transactionList = load('03-transaction-page.html');
 		//  transactions page
@@ -84,7 +84,7 @@ describe('parser.js', function () {
 
 	describe('- parseAccountList()', function () {
 		it('should parse account list', function () {
-			parser.parseAccountList(pages.accountList,
+			parser.parseAccountList(pages.homePage,
 				function (error, accounts) {
 					expect(error === null).to.be.true;
 
@@ -95,18 +95,21 @@ describe('parser.js', function () {
 					expect(accounts[0].accountNumber).to.equal('5282 0634');
 					expect(accounts[0].number).to.equal('06233852820634');
 					expect(accounts[0].balance).to.equal(23.45);
+					expect(accounts[0].availableFunds).to.equal(-23.45);
 
 					expect(accounts[1].nickname).to.equal('NetBank Saver');
 					expect(accounts[1].bsbNumber).to.equal('06 2438');
 					expect(accounts[1].accountNumber).to.equal('5287 0642');
 					expect(accounts[1].number).to.equal('06243852870642');
 					expect(accounts[1].balance).to.equal(1234.50);
+					expect(accounts[1].availableFunds).to.equal(234.50);
 
 					expect(accounts[2].nickname).to.equal('GoalSaver');
 					expect(accounts[2].bsbNumber).to.equal('06 2860');
 					expect(accounts[2].accountNumber).to.equal('1000 6652');
 					expect(accounts[2].number).to.equal('06286010006652');
 					expect(accounts[2].balance).to.equal(76543.00);
+					expect(accounts[2].availableFunds).to.equal(76043.00);
 
 					expect(accounts[3].nickname).to.equal(
 						'MasterCard Platinum');
@@ -115,13 +118,14 @@ describe('parser.js', function () {
 						'5218 9217 4383 0977');
 					expect(accounts[3].number).to.equal('5218921743830977');
 					expect(accounts[3].balance).to.equal(-123.45);
+					expect(accounts[3].availableFunds).to.equal(12345.67);
 				});
 		});
 	});
 
 	describe('- parseHomePage()', function () {
 		it('should parse the submit form and account list', function () {
-			parser.parseHomePage(pages.accountList,
+			parser.parseHomePage(pages.homePage,
 				function (error, form, accounts) {
 					expect(error === null).to.be.true;
 

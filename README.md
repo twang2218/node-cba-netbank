@@ -46,14 +46,16 @@ The result will look like below:
     bsbNumber: '06 2338',
     accountNumber: '5282 0634',
     number: '06233852820634',
-    balance: 987.65
+    balance: 987.65,
+    availableFunds: 907.65
 }, {
     nickname: 'NetBank Saver',
     url: '/netbank/TransactionHistory/History.aspx?ACCOUNT_PRODUCT_TYPE=DDA&DEEPLINKING_WITH_CONTEXT=True&_e=UGxheSB3aXRoIG1hZ2ljISAyCg%3d%3d&RID=N4bdFut-vECN0pmnBx5aMA&SID=tGfirrUiubE%3d',
     bsbNumber: '06 2438',
     accountNumber: '5287 0642',
     number: '06243852870642',
-    balance: 4321.01
+    balance: 4321.01,
+    availableFunds: 4021.00
 },{
 ...
 }]
@@ -62,11 +64,12 @@ The result will look like below:
 For each account:
 
  * ```nickname```: Account name;
- * ```url```: Transaction page for the account, it should be different everytime you logged in;
+ * ```url```: Transaction page for the account, it will be different everytime you logged in;
  * ```bsbNumber```: BSB number;
  * ```accountNumber```: Account number (without BSB part);
  * ```number```: The entire account number, without space;
  * ```balance```: Current account balance. It might be different from the available funds;
+ * ```availableFunds```: Current available funds of the account.
 
  ### Retrieve Transactions for Given Account
 
