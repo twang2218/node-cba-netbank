@@ -33,7 +33,7 @@ describe('api.js', function () {
 	describe('- getTransactions()', function () {
 		it('should retrieve transactions for given account', function (done) {
 			this.timeout(600000);
-			api.getTransactions(accountList[4], function (error, transactions) {
+			api.getTransactions(accountList[0], function (error, transactions) {
 				expect(error).to.be.null;
 				expect(transactions).not.to.be.null;
 				expect(transactions.length).to.be.above(1000);

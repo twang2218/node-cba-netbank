@@ -30,7 +30,7 @@
 	},
 	"repository": {
 		"type": "git",
-		"url": "git@github.com:twang2218/node-cba-netbank.git"
+		"url": "https://github.com/twang2218/node-cba-netbank.git"
 	},
 	"keywords": [
 		"api",
