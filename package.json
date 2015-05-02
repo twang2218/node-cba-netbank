@@ -14,19 +14,22 @@
 	},
 	"devDependencies": {
 		"chai": "^2.3.0",
+		"coveralls": "^2.11.2",
 		"istanbul": "^0.3.13",
+		"istanbul-coveralls": "^1.0.2",
 		"jscs": "^1.13.0",
 		"jshint": "^2.7.0",
 		"jshint-full-path": "^1.1.1",
 		"mocha": "^2.2.4",
+		"mocha-lcov-reporter": "0.0.2",
 		"nock": "^1.7.1"
 	},
 	"scripts": {
 		"lint": "./node_modules/.bin/jshint . --reporter=./node_modules/jshint-full-path/index.js",
 		"checkStyle": "./node_modules/.bin/jscs .",
 		"pretest": "npm run-script lint && npm run-script checkStyle",
-		"test": "./node_modules/.bin/istanbul cover ./node_modules/.bin/_mocha -- --recursive -R spec",
-		"posttest": "./node_modules/.bin/istanbul check-coverage"
+		"test": "./node_modules/.bin/istanbul cover ./node_modules/.bin/_mocha --report lcovonly -- -R spec",
+		"posttest": "./node_modules/.bin/istanbul check-coverage && istanbul-coveralls"
 	},
 	"repository": {
 		"type": "git",

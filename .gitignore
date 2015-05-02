@@ -33,3 +33,4 @@ node_modules
 ### Project Specified ###
 
 test/auth.json
+.coveralls.yml
