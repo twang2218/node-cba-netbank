@@ -25,17 +25,17 @@ describe('web.js', function () {
 	})
 
 	describe('- get()', function () {
-		it('should download google page, run parser, call back', function (done) {
-			var google = nock('http://www.google.com')
+		it('should get a page, run parser, call back', function (done) {
+			var commbank = nock('https://www.my.commbank.com.au')
 				.get('/')
 				.reply(200, 'Hello from Google!');
 
 			web.get({
-				url: 'http://www.google.com'
+				url: '/'
 			}, simpleParser, function (error,
 				words) {
 				simpleCallback(error, words);
-				google.done();
+				commbank.done();
 				done();
 			});
 		});
@@ -43,7 +43,7 @@ describe('web.js', function () {
 
 	describe('- post()', function () {
 		it('should post a form, parse the page, and call back', function (done) {
-			var google = nock('http://www.google.com.au')
+			var commbank = nock('https://www.my.commbank.com.au')
 				.post('/users', function (body) {
 					expect(body.username).to.equal('johndoe');
 					expect(body.password).to.equal('123456');
@@ -52,14 +52,14 @@ describe('web.js', function () {
 				}).reply(200, "Hello from Google!");
 
 			web.post({
-				url: 'http://www.google.com.au/users',
+				url: '/users',
 				form: {
 					username: 'johndoe',
 					password: '123456'
 				}
 			}, simpleParser, function (error, words) {
 				simpleCallback(error, words);
-				google.done();
+				commbank.done();
 				done();
 			});
 		});
