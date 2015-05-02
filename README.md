@@ -1,7 +1,11 @@
 node-cba-netbank
 ================
 
-[![Build Status](https://travis-ci.org/twang2218/node-cba-netbank.svg?branch=master)](https://travis-ci.org/twang2218/node-cba-netbank)
+[![NPM version][npm-version-image]][npm-url]
+[![MIT License][license-image]][license-url]
+[![Build Status][travis-image]][travis-url]
+[![Dependency Status][dependency-image]][dependency-url]
+[![Coverage Status][coverage-image]][coverage-url]
 
 Unofficial The Commonwealth Bank of Australia NetBank API wrap for
 Node.js
@@ -155,3 +159,20 @@ npm test
 ```
 
 The test will try to login and get transactions from the first account, and if it will fail if the retrieved transactions number is less than 1000. It's ok if you don't have that much transactions in the account. The purpose of checking whether it get more than 1000 transactions is to check whether it can overcome the maximum transactions limits.
+
+
+[license-image]: http://img.shields.io/badge/license-Apache%202.0-blue.svg?style=flat
+[license-url]: LICENSE.txt
+
+[npm-url]: https://npmjs.org/package/node-cba-netbank
+[npm-version-image]: http://img.shields.io/npm/v/node-cba-netbank.svg?style=flat
+[npm-downloads-image]: http://img.shields.io/npm/dm/node-cba-netbank.svg?style=flat
+
+[travis-url]: http://travis-ci.org/twang2218/node-cba-netbank
+[travis-image]: http://img.shields.io/travis/twang2218/node-cba-netbank/develop.svg?style=flat
+
+[dependency-url]: https://gemnasium.com/twang2218/node-cba-netbank
+[dependency-image]: http://img.shields.io/gemnasium/twang2218/node-cba-netbank.svg
+
+[coverage-url]: https://coveralls.io/r/twang2218/node-cba-netbank
+[coverage-image]: http://img.shields.io/coveralls/twang2218/node-cba-netbank.svg
