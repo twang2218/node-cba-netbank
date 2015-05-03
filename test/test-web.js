@@ -4,8 +4,6 @@ var web = require('../lib/web');
 var nock = require('nock');
 
 describe('web.js', function () {
-	var google = {};
-
 	//  create a simple parser to use
 	function simpleParser(page, callback) {
 		expect(page).to.equal('Hello from Google!');
@@ -66,8 +64,6 @@ describe('web.js', function () {
 	});
 
 	after(function () {
-		nock.restore();
 		nock.cleanAll();
-		nock.enableNetConnect();
 	});
 });
