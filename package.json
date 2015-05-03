@@ -1,6 +1,6 @@
 {
 	"name": "node-cba-netbank",
-	"version": "0.2.0",
+	"version": "0.3.0",
 	"description": "Unofficial Commonwealth Bank Australia Netbank API Wrapper for Node.js",
 	"main": "lib/index.js",
 	"dependencies": {
