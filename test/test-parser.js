@@ -37,11 +37,11 @@ describe('parser.js', function () {
 
 		before(function () {
 			parser.parseForm(pages.login, function (error, form) {
-				expect(error === null).to.be.true;
+				expect(error).to.be.null;
 				formLogin = form;
 			});
 			parser.parseForm(pages.transactionList, function (error, form) {
-				expect(error === null).to.be.true;
+				expect(error).to.be.null;
 				formTransaction = form;
 			});
 		});
@@ -80,60 +80,82 @@ describe('parser.js', function () {
 			expect(formTransaction.ctl00$BodyPlaceHolder$ddlDateRange$field)
 				.to.equal('3');
 		});
+		it('should raise error if there is no form in the page', function (done) {
+			parser.parseForm(pages.transactionPartial, function (error, form) {
+				expect(error).not.to.be.null;
+				done();
+			});
+		});
 	});
 
 	describe('- parseAccountList()', function () {
-		it('should parse account list', function () {
-			parser.parseAccountList(pages.homePage,
-				function (error, accounts) {
-					expect(error === null).to.be.true;
+		it('should parse account list', function (done) {
+			parser.parseAccountList(pages.homePage, function (error, accounts) {
+				expect(error).to.be.null;
 
-					expect(accounts.length).to.equal(4);
+				expect(accounts.length).to.equal(4);
 
-					expect(accounts[0].nickname).to.equal('Smart Access');
-					expect(accounts[0].bsbNumber).to.equal('06 2338');
-					expect(accounts[0].accountNumber).to.equal('5282 0634');
-					expect(accounts[0].number).to.equal('06233852820634');
-					expect(accounts[0].balance).to.equal(23.45);
-					expect(accounts[0].availableFunds).to.equal(-23.45);
+				expect(accounts[0].nickname).to.equal('Smart Access');
+				expect(accounts[0].bsbNumber).to.equal('06 2338');
+				expect(accounts[0].accountNumber).to.equal('5282 0634');
+				expect(accounts[0].number).to.equal('06233852820634');
+				expect(accounts[0].balance).to.equal(23.45);
+				expect(accounts[0].availableFunds).to.equal(-23.45);
 
-					expect(accounts[1].nickname).to.equal('NetBank Saver');
-					expect(accounts[1].bsbNumber).to.equal('06 2438');
-					expect(accounts[1].accountNumber).to.equal('5287 0642');
-					expect(accounts[1].number).to.equal('06243852870642');
-					expect(accounts[1].balance).to.equal(1234.50);
-					expect(accounts[1].availableFunds).to.equal(234.50);
+				expect(accounts[1].nickname).to.equal('NetBank Saver');
+				expect(accounts[1].bsbNumber).to.equal('06 2438');
+				expect(accounts[1].accountNumber).to.equal('5287 0642');
+				expect(accounts[1].number).to.equal('06243852870642');
+				expect(accounts[1].balance).to.equal(1234.50);
+				expect(accounts[1].availableFunds).to.equal(234.50);
 
-					expect(accounts[2].nickname).to.equal('GoalSaver');
-					expect(accounts[2].bsbNumber).to.equal('06 2860');
-					expect(accounts[2].accountNumber).to.equal('1000 6652');
-					expect(accounts[2].number).to.equal('06286010006652');
-					expect(accounts[2].balance).to.equal(76543.00);
-					expect(accounts[2].availableFunds).to.equal(76043.00);
+				expect(accounts[2].nickname).to.equal('GoalSaver');
+				expect(accounts[2].bsbNumber).to.equal('06 2860');
+				expect(accounts[2].accountNumber).to.equal('1000 6652');
+				expect(accounts[2].number).to.equal('06286010006652');
+				expect(accounts[2].balance).to.equal(76543.00);
+				expect(accounts[2].availableFunds).to.equal(76043.00);
 
-					expect(accounts[3].nickname).to.equal(
-						'MasterCard Platinum');
-					expect(accounts[3].bsbNumber).to.equal('');
-					expect(accounts[3].accountNumber).to.equal(
-						'5218 9217 4383 0977');
-					expect(accounts[3].number).to.equal('5218921743830977');
-					expect(accounts[3].balance).to.equal(-123.45);
-					expect(accounts[3].availableFunds).to.equal(12345.67);
-				});
+				expect(accounts[3].nickname).to.equal(
+					'MasterCard Platinum');
+				expect(accounts[3].bsbNumber).to.equal('');
+				expect(accounts[3].accountNumber).to.equal(
+					'5218 9217 4383 0977');
+				expect(accounts[3].number).to.equal('5218921743830977');
+				expect(accounts[3].balance).to.equal(-123.45);
+				expect(accounts[3].availableFunds).to.equal(12345.67);
+
+				done();
+			});
+		});
+
+		it('should raise error if there is no account list in the page', function (
+			done) {
+			parser.parseAccountList(pages.login, function (error, accounts) {
+				expect(error).not.to.be.null;
+				done();
+			});
 		});
 	});
 
 	describe('- parseHomePage()', function () {
-		it('should parse the submit form and account list', function () {
-			parser.parseHomePage(pages.homePage,
-				function (error, form, accounts) {
-					expect(error === null).to.be.true;
+		it('should parse the submit form and account list', function (done) {
+			parser.parseHomePage(pages.homePage, function (error, form, accounts) {
+				expect(error).to.be.null;
 
-					expect(form).to.have.property('RID');
-					expect(form).to.have.property('SID');
-					expect(form).to.have.property('__EVENTVALIDATION');
-					expect(accounts.length).to.equal(4);
-				});
+				expect(form).to.have.property('RID');
+				expect(form).to.have.property('SID');
+				expect(form).to.have.property('__EVENTVALIDATION');
+				expect(accounts.length).to.equal(4);
+
+				done();
+			});
+		});
+		it('should raise error if fail to parse the page.', function (done) {
+			parser.parseHomePage(pages.login, function (error, form, accounts) {
+				expect(error).not.to.be.null;
+				done();
+			});
 		});
 	});
 
@@ -176,7 +198,7 @@ describe('parser.js', function () {
 			expect(t1.TranCode.Text).to.equal('00 05');
 		});
 		it('should parse transactions JSON array from partial callback',
-			function () {
+			function (done) {
 				var json = parser.extractTransactionJsonArray(pages
 					.transactionPartial);
 				expect(json.length).to.equal(40);
@@ -189,15 +211,18 @@ describe('parser.js', function () {
 				expect(t1.Balance.Text).to.equal('$25.68 CR');
 				expect(t1.TranCode.Text).to.equal('550085');
 				expect(t1.ReceiptNumber.Text).to.equal('N120548420145');
+
+				done();
 			});
-		it('should return null if cannot parse the page', function () {
+		it('should return null if cannot parse the page', function (done) {
 			var json = parser.extractTransactionJsonArray(pages.login);
 			expect(json).to.be.null;
+			done();
 		});
 	});
 
 	describe('- parseJsonToTransaction()', function () {
-		it('should parse JSON to Transaction object - case 1', function () {
+		it('should parse JSON to Transaction object - case 1', function (done) {
 			var json = JSON.parse(pages.transactionJson1);
 			var t = parser.parseJsonToTransaction(json);
 
@@ -215,8 +240,10 @@ describe('parser.js', function () {
 			expect(t.balance).to.equal(5.68);
 			expect(t.trancode).to.equal('700000');
 			expect(t.receiptnumber).to.equal('');
+
+			done();
 		});
-		it('should parse JSON to Transaction object - case 2', function () {
+		it('should parse JSON to Transaction object - case 2', function (done) {
 			var json = JSON.parse(pages.transactionJson2);
 			var t = parser.parseJsonToTransaction(json);
 
@@ -235,8 +262,10 @@ describe('parser.js', function () {
 			expect(t.balance).to.equal(20.67);
 			expect(t.trancode).to.equal('550085');
 			expect(t.receiptnumber).to.equal('N112044272766');
+
+			done();
 		});
-		it('should parse JSON to Transaction object - case 3', function () {
+		it('should parse JSON to Transaction object - case 3', function (done) {
 			var json = JSON.parse(pages.transactionJson3);
 			var t = parser.parseJsonToTransaction(json);
 
@@ -255,11 +284,20 @@ describe('parser.js', function () {
 			expect(t.balance).to.equal(0);
 			expect(t.trancode).to.equal('00 05');
 			expect(t.receiptnumber).to.equal('');
+
+			done();
+		});
+		it('should raise error if given json is not parsable', function (done) {
+			var json = JSON.parse('{"it":"is not transaction"}');
+			var t = parser.parseJsonToTransaction(json);
+			expect(t).to.be.null;
+
+			done();
 		});
 	});
 
 	describe('- parseTransactions()', function () {
-		it('should parse a page to transction object array', function () {
+		it('should parse a page to transction object array', function (done) {
 			parser.parseTransactions(pages.transactionList, function (error, trans) {
 				expect(error).to.be.null;
 
@@ -275,10 +313,12 @@ describe('parser.js', function () {
 				expect(trans[8].balance).to.equal(0);
 				expect(trans[9].trancode).to.equal('00 05');
 				expect(trans[10].receiptnumber).to.equal('');
+
+				done();
 			});
 		});
 		it('should parse a PARTIAL page to transction object array',
-			function () {
+			function (done) {
 				parser.parseTransactions(pages.transactionPartial,
 					function (error, trans) {
 						expect(error).to.be.null;
@@ -296,17 +336,21 @@ describe('parser.js', function () {
 						expect(trans[8].balance).to.equal(680.67);
 						expect(trans[9].trancode).to.equal('550085');
 						expect(trans[10].receiptnumber).to.equal('N112744391641');
+
+						done();
 					});
 			});
-		it('should raise error if it cannot parse the page', function () {
+		it('should raise error if it cannot parse the page', function (done) {
 			parser.parseTransactions(pages.login, function (error, trans) {
 				expect(error).not.to.be.null;
+
+				done();
 			});
 		});
 	});
 
 	describe('- parseAccountKeys()', function () {
-		it('should parse account list with the key of form', function () {
+		it('should parse account list with the key of form', function (done) {
 			parser.parseAccountKeys(pages.transactionList,
 				function (error, keys) {
 					expect(error).to.be.null;
@@ -320,14 +364,23 @@ describe('parser.js', function () {
 					expect(keys[3].key).to.equal(
 						'5218921743830977,MCD,True,True,True,False,True,False,True,False'
 					);
+
+					done();
 				});
 		});
+		it('should raise error if there is no account list options in the page',
+			function (done) {
+				parser.parseAccountKeys(pages.login, function (error, keys) {
+					expect(error).not.to.be.null;
+					done();
+				});
+			});
 	});
 
 	describe('- parseTransactionPage()', function () {
 		it(
 			'should parse the transaction page and get form, transactions and keys',
-			function () {
+			function (done) {
 				parser.parseTransactionPage(pages.transactionList,
 					function (error, form, transactions, keys) {
 						expect(error).to.be.null;
@@ -335,7 +388,17 @@ describe('parser.js', function () {
 						expect(Object.keys(form).length).to.equal(40);
 						expect(transactions.length).to.equal(59);
 						expect(keys.length).to.equal(4);
+
+						done();
 					});
 			});
+		it('should raise error if it\'s not transaction page.', function (done) {
+			parser.parseTransactionPage(pages.login, function (error, form,
+				transactions, keys) {
+				expect(error).not.to.be.null;
+
+				done();
+			});
+		});
 	});
 });
