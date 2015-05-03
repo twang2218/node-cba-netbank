@@ -151,8 +151,14 @@ describe('parser.js', function () {
 				done();
 			});
 		});
-		it('should raise error if fail to parse the page.', function (done) {
+		it('should raise error if fail to parse the account list in the home page.', function (done) {
 			parser.parseHomePage(pages.login, function (error, form, accounts) {
+				expect(error).not.to.be.null;
+				done();
+			});
+		});
+		it('should raise error if fail to parse the page at all', function (done) {
+			parser.parseHomePage(pages.transactionPartial, function (error, form, accounts) {
 				expect(error).not.to.be.null;
 				done();
 			});
@@ -392,13 +398,21 @@ describe('parser.js', function () {
 						done();
 					});
 			});
-		it('should raise error if it\'s not transaction page.', function (done) {
-			parser.parseTransactionPage(pages.login, function (error, form,
-				transactions, keys) {
-				expect(error).not.to.be.null;
+			it('should raise error if it\'s not transaction page.', function (done) {
+				parser.parseTransactionPage(pages.login, function (error, form,
+					transactions, keys) {
+					expect(error).not.to.be.null;
 
-				done();
+					done();
+				});
 			});
-		});
+			it('should raise error if it\'s a page without form.', function (done) {
+				parser.parseTransactionPage(pages.transactionPartial, function (error, form,
+					transactions, keys) {
+					expect(error).not.to.be.null;
+
+					done();
+				});
+			});
 	});
 });

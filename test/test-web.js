@@ -37,6 +37,20 @@ describe('web.js', function () {
 				done();
 			});
 		});
+		it('should raise error if request failed.', function (done) {
+			var commbank = nock('https://www.my.commbank.com.au')
+				.get('/')
+				.replyWithError("something awful happened");
+
+			web.get({
+				url: '/'
+			}, simpleParser, function (error,
+				words) {
+				expect(error).not.to.be.null;
+				commbank.done();
+				done();
+			});
+		});
 	});
 
 	describe('- post()', function () {
@@ -60,6 +74,28 @@ describe('web.js', function () {
 				commbank.done();
 				done();
 			});
+		});
+		it('should raise error if request failed.', function (done) {
+			var commbank = nock('https://www.my.commbank.com.au')
+				.post('/users', function (body) {
+					expect(body.username).to.equal('johndoe');
+					expect(body.password).to.equal('123456');
+
+					return (body.username === 'johndoe' && body.password === '123456');
+				}).replyWithError("something awful happened");
+
+			web.post({
+				url: '/users',
+				form: {
+					username: 'johndoe',
+					password: '123456'
+				}
+			}, simpleParser, function (error, words) {
+				expect(error).not.to.be.null;
+				commbank.done();
+				done();
+			});
+
 		});
 	});
 
