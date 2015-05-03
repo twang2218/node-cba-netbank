@@ -13,6 +13,7 @@ function load(filename) {
 
 describe('parser.js', function () {
 	var pages = {};
+	var links = {};
 
 	before(function () {
 		//  login page
@@ -29,6 +30,11 @@ describe('parser.js', function () {
 		pages.transactionJson2 = load('transaction-2.json');
 		//	transaction json - case 3
 		pages.transactionJson3 = load('transaction-3.json');
+
+		links.login = 'https://www.my.commbank.com.au/netbank/Logon/Logon.aspx';
+		links.home = '/netbank/Portfolio/Home/Home.aspx';
+		links.history =
+			'https://www.my.commbank.com.au/netbank/TransactionHistory/History.aspx';
 	});
 
 	describe('- parseForm()', function () {
@@ -36,12 +42,15 @@ describe('parser.js', function () {
 		var formTransaction = {};
 
 		before(function () {
-			parser.parseForm(pages.login, function (error, form) {
+			parser.parseForm(links.login, pages.login, function (error, url, form) {
 				expect(error).to.be.null;
+				expect(url).to.equal(links.login);
 				formLogin = form;
 			});
-			parser.parseForm(pages.transactionList, function (error, form) {
+			parser.parseForm(links.history, pages.transactionList, function (error,
+				url, form) {
 				expect(error).to.be.null;
+				expect(url).to.equal(links.history);
 				formTransaction = form;
 			});
 		});
@@ -81,7 +90,8 @@ describe('parser.js', function () {
 				.to.equal('3');
 		});
 		it('should raise error if there is no form in the page', function (done) {
-			parser.parseForm(pages.transactionPartial, function (error, form) {
+			parser.parseForm(links.history, pages.transactionPartial, function (
+				error, url, form) {
 				expect(error).not.to.be.null;
 				done();
 			});
@@ -90,8 +100,10 @@ describe('parser.js', function () {
 
 	describe('- parseAccountList()', function () {
 		it('should parse account list', function (done) {
-			parser.parseAccountList(pages.homePage, function (error, accounts) {
+			parser.parseAccountList(links.home, pages.homePage, function (error,
+				url, accounts) {
 				expect(error).to.be.null;
+				expect(url).to.equal(links.home);
 
 				expect(accounts.length).to.equal(4);
 
@@ -131,7 +143,8 @@ describe('parser.js', function () {
 
 		it('should raise error if there is no account list in the page', function (
 			done) {
-			parser.parseAccountList(pages.login, function (error, accounts) {
+			parser.parseAccountList(links.login, pages.login, function (error,
+				accounts) {
 				expect(error).not.to.be.null;
 				done();
 			});
@@ -140,8 +153,10 @@ describe('parser.js', function () {
 
 	describe('- parseHomePage()', function () {
 		it('should parse the submit form and account list', function (done) {
-			parser.parseHomePage(pages.homePage, function (error, form, accounts) {
+			parser.parseHomePage(links.home, pages.homePage, function (error, url,
+				form, accounts) {
 				expect(error).to.be.null;
+				expect(url).to.equal(links.home);
 
 				expect(form).to.have.property('RID');
 				expect(form).to.have.property('SID');
@@ -151,14 +166,18 @@ describe('parser.js', function () {
 				done();
 			});
 		});
-		it('should raise error if fail to parse the account list in the home page.', function (done) {
-			parser.parseHomePage(pages.login, function (error, form, accounts) {
-				expect(error).not.to.be.null;
-				done();
+		it(
+			'should raise error if fail to parse the account list in the home page.',
+			function (done) {
+				parser.parseHomePage(links.login, pages.login, function (error, url,
+					form, accounts) {
+					expect(error).not.to.be.null;
+					done();
+				});
 			});
-		});
 		it('should raise error if fail to parse the page at all', function (done) {
-			parser.parseHomePage(pages.transactionPartial, function (error, form, accounts) {
+			parser.parseHomePage(links.login, pages.transactionPartial, function (
+				error, url, form, accounts) {
 				expect(error).not.to.be.null;
 				done();
 			});
@@ -304,30 +323,33 @@ describe('parser.js', function () {
 
 	describe('- parseTransactions()', function () {
 		it('should parse a page to transction object array', function (done) {
-			parser.parseTransactions(pages.transactionList, function (error, trans) {
-				expect(error).to.be.null;
+			parser.parseTransactions(links.history, pages.transactionList,
+				function (error, url, trans) {
+					expect(error).to.be.null;
+					expect(url).to.equal(links.history);
 
-				expect(trans.length).to.equal(59);
-				expect(moment(trans[0].timestamp).utc().year()).to.equal(2015);
-				expect(moment(trans[1].timestamp).utc().month()).to.equal(3);
-				expect(moment(trans[2].timestamp).utc().date()).to.equal(25);
-				expect(moment(trans[3].timestamp).utc().hours()).to.equal(0);
-				expect(moment(trans[4].timestamp).utc().minutes()).to.equal(0);
-				expect(moment(trans[5].timestamp).utc().seconds()).to.equal(0);
-				expect(trans[6].description).to.equal('INTEREST CHARGES');
-				expect(trans[7].amount).to.equal(-5.5);
-				expect(trans[8].balance).to.equal(0);
-				expect(trans[9].trancode).to.equal('00 05');
-				expect(trans[10].receiptnumber).to.equal('');
+					expect(trans.length).to.equal(59);
+					expect(moment(trans[0].timestamp).utc().year()).to.equal(2015);
+					expect(moment(trans[1].timestamp).utc().month()).to.equal(3);
+					expect(moment(trans[2].timestamp).utc().date()).to.equal(25);
+					expect(moment(trans[3].timestamp).utc().hours()).to.equal(0);
+					expect(moment(trans[4].timestamp).utc().minutes()).to.equal(0);
+					expect(moment(trans[5].timestamp).utc().seconds()).to.equal(0);
+					expect(trans[6].description).to.equal('INTEREST CHARGES');
+					expect(trans[7].amount).to.equal(-5.5);
+					expect(trans[8].balance).to.equal(0);
+					expect(trans[9].trancode).to.equal('00 05');
+					expect(trans[10].receiptnumber).to.equal('');
 
-				done();
-			});
+					done();
+				});
 		});
 		it('should parse a PARTIAL page to transction object array',
 			function (done) {
-				parser.parseTransactions(pages.transactionPartial,
-					function (error, trans) {
+				parser.parseTransactions(links.history, pages.transactionPartial,
+					function (error, url, trans) {
 						expect(error).to.be.null;
+						expect(url).to.equal(links.history);
 
 						expect(trans.length).to.equal(40);
 						expect(moment(trans[0].timestamp).utc().year()).to.equal(2014);
@@ -347,7 +369,8 @@ describe('parser.js', function () {
 					});
 			});
 		it('should raise error if it cannot parse the page', function (done) {
-			parser.parseTransactions(pages.login, function (error, trans) {
+			parser.parseTransactions(links.login, pages.login, function (error,
+				url, trans) {
 				expect(error).not.to.be.null;
 
 				done();
@@ -357,9 +380,10 @@ describe('parser.js', function () {
 
 	describe('- parseAccountKeys()', function () {
 		it('should parse account list with the key of form', function (done) {
-			parser.parseAccountKeys(pages.transactionList,
-				function (error, keys) {
+			parser.parseAccountKeys(links.history, pages.transactionList,
+				function (error, url, keys) {
 					expect(error).to.be.null;
+					expect(url).to.equal(links.history);
 
 					expect(keys.length).to.equal(4);
 					expect(keys[0].nickname).to.equal('Smart Access');
@@ -376,7 +400,8 @@ describe('parser.js', function () {
 		});
 		it('should raise error if there is no account list options in the page',
 			function (done) {
-				parser.parseAccountKeys(pages.login, function (error, keys) {
+				parser.parseAccountKeys(links.login, pages.login, function (error, url,
+					keys) {
 					expect(error).not.to.be.null;
 					done();
 				});
@@ -387,9 +412,10 @@ describe('parser.js', function () {
 		it(
 			'should parse the transaction page and get form, transactions and keys',
 			function (done) {
-				parser.parseTransactionPage(pages.transactionList,
-					function (error, form, transactions, keys) {
+				parser.parseTransactionPage(links.history, pages.transactionList,
+					function (error, url, form, transactions, keys) {
 						expect(error).to.be.null;
+						expect(url).to.equal(links.history);
 
 						expect(Object.keys(form).length).to.equal(40);
 						expect(transactions.length).to.equal(59);
@@ -398,21 +424,21 @@ describe('parser.js', function () {
 						done();
 					});
 			});
-			it('should raise error if it\'s not transaction page.', function (done) {
-				parser.parseTransactionPage(pages.login, function (error, form,
-					transactions, keys) {
+		it('should raise error if it\'s not transaction page.', function (done) {
+			parser.parseTransactionPage(links.login, pages.login,
+				function (error, url, form, transactions, keys) {
 					expect(error).not.to.be.null;
 
 					done();
 				});
-			});
-			it('should raise error if it\'s a page without form.', function (done) {
-				parser.parseTransactionPage(pages.transactionPartial, function (error, form,
-					transactions, keys) {
+		});
+		it('should raise error if it\'s a page without form.', function (done) {
+			parser.parseTransactionPage(links.history, pages.transactionPartial,
+				function (error, url, form, transactions, keys) {
 					expect(error).not.to.be.null;
 
 					done();
 				});
-			});
+		});
 	});
 });

@@ -5,13 +5,13 @@ var nock = require('nock');
 
 describe('web.js', function () {
 	//  create a simple parser to use
-	function simpleParser(page, callback) {
+	function simpleParser(url, page, callback) {
 		expect(page).to.equal('Hello from Google!');
-		callback(null, page.split(' '));
+		callback(null, url, page.split(' '));
 	}
 
 	//  create a simple callback to use
-	function simpleCallback(error, words) {
+	function simpleCallback(error, url, words) {
 		if (error) {
 			throw error
 		}
@@ -29,10 +29,9 @@ describe('web.js', function () {
 				.reply(200, 'Hello from Google!');
 
 			web.get({
-				url: '/'
-			}, simpleParser, function (error,
-				words) {
-				simpleCallback(error, words);
+				url: 'https://www.my.commbank.com.au/'
+			}, simpleParser, function (error, url, words) {
+				simpleCallback(error, url, words);
 				commbank.done();
 				done();
 			});
@@ -43,9 +42,8 @@ describe('web.js', function () {
 				.replyWithError("something awful happened");
 
 			web.get({
-				url: '/'
-			}, simpleParser, function (error,
-				words) {
+				url: 'https://www.my.commbank.com.au/'
+			}, simpleParser, function (error, url, words) {
 				expect(error).not.to.be.null;
 				commbank.done();
 				done();
@@ -64,13 +62,13 @@ describe('web.js', function () {
 				}).reply(200, "Hello from Google!");
 
 			web.post({
-				url: '/users',
+				url: 'https://www.my.commbank.com.au/users',
 				form: {
 					username: 'johndoe',
 					password: '123456'
 				}
-			}, simpleParser, function (error, words) {
-				simpleCallback(error, words);
+			}, simpleParser, function (error, url, words) {
+				simpleCallback(error, url, words);
 				commbank.done();
 				done();
 			});
@@ -85,12 +83,12 @@ describe('web.js', function () {
 				}).replyWithError("something awful happened");
 
 			web.post({
-				url: '/users',
+				url: 'https://www.my.commbank.com.au/users',
 				form: {
 					username: 'johndoe',
 					password: '123456'
 				}
-			}, simpleParser, function (error, words) {
+			}, simpleParser, function (error, url, words) {
 				expect(error).not.to.be.null;
 				commbank.done();
 				done();
