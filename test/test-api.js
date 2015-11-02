@@ -40,7 +40,7 @@ describe('api.js', function () {
 				api.getTransactions(accountList[0], function (error, transactions) {
 					expect(error).to.be.null;
 					expect(transactions).not.to.be.null;
-					expect(transactions.length).to.be.above(1000);
+					expect(transactions.length).to.be.above(400);
 
 					done();
 				});
