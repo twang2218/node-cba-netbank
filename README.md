@@ -157,13 +157,7 @@ To enable real world testing, please put a JSON file, ```auth.json``` under ```.
 Then run command:
 
 ```bash
-mocha
-```
-
-or, if `mocha` is not installed globally:
-
-```bash
-./node_module/.bin/mocha
+npm test
 ```
 
 The test will try to login and get transactions from the first account, and if it will fail if the retrieved transactions number is less than 1000. It's ok if you don't have that much transactions in the account. The purpose of checking whether it get more than 1000 transactions is to check whether it can overcome the maximum transactions limits.
