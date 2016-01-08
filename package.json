@@ -3,9 +3,11 @@
 	"version": "0.4.0",
 	"description": "Unofficial Commonwealth Bank Australia Netbank API Wrapper for Node.js",
 	"main": "lib/index.js",
+	"bin": "bin/node-cba-netbank.js",
 	"dependencies": {
 		"cheerio": "^0.19.0",
 		"collections": "^3.0.0",
+		"inquirer": "^0.11.1",
 		"moment": "^2.11.0",
 		"request": "^2.67.0",
 		"string": "^3.3.1"
