@@ -9,4 +9,4 @@ node_js:
 git:
   depth: 10
 
-script: npm run test-coveralls
+after_success: npm run test-coveralls
