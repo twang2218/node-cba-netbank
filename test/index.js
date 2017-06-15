@@ -1,3 +1,3 @@
-require('./test-web');
-require('./test-parser');
-require('./test-api');
+require('./web.test');
+require('./parser.test');
+require('./api.test');
