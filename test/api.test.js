@@ -75,8 +75,6 @@ function mockWebsite() {
 }
 
 describe('api.js', () => {
-  let accountList;
-
   //  start the real world testing if there is a credential file.
   if (fs.existsSync(`${__dirname}/auth.json`)) {
     // this.timeout(20000);
