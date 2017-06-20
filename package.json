@@ -1,65 +1,76 @@
 {
-	"name": "node-cba-netbank",
-	"version": "0.5.0",
-	"description": "Unofficial Commonwealth Bank Australia Netbank API Wrapper for Node.js",
-	"main": "lib/index.js",
-	"bin": "bin/node-cba-netbank.js",
-	"dependencies": {
-		"cheerio": "^0.19.0",
-		"collections": "^3.0.0",
-		"inquirer": "^0.11.1",
-		"moment": "^2.11.0",
-		"request": "^2.67.0",
-		"string": "^3.3.1"
-	},
-	"directories": {
-		"lib": "./lib"
-	},
-	"devDependencies": {
-		"babel-cli": "^6.24.1",
-		"babel-core": "^6.25.0",
-		"babel-eslint": "^7.2.3",
-		"babel-loader": "^7.0.0",
-		"babel-plugin-add-module-exports": "^0.2.1",
-		"babel-preset-es2015": "^6.24.1",
-		"chai": "^3.4.1",
-		"coveralls": "^2.11.6",
-		"eslint": "^4.0.0",
-		"eslint-loader": "^1.8.0",
-		"istanbul": "^0.4.1",
-		"istanbul-coveralls": "^1.0.3",
-		"mocha": "^2.3.4",
-		"mocha-jscs": "^4.0.0",
-		"mocha-jshint": "^2.2.6",
-		"mocha-lcov-reporter": "1.0.0",
-		"nock": "^5.2.1",
-		"webpack": "^2.6.1",
-		"yargs": "^8.0.2"
-	},
-	"scripts": {
-		"build": "webpack --env build",
-		"dev": "webpack --progress --colors --watch --env dev",
-		"test": "npm run test-istabul-mocha && npm run test-istabul-coverage",
-		"test-istabul-mocha": "istanbul cover _mocha --report lcovonly -- -R spec",
-		"test-istabul-coverage": "istanbul check-coverage",
-		"test-coveralls": "npm run test-coveralls-run && npm run test-coveralls-clean",
-		"test-coveralls-run": "cat ./coverage/lcov.info | coveralls",
-		"test-coveralls-clean": "rm -rf ./coverage"
-	},
-	"repository": {
-		"type": "git",
-		"url": "https://github.com/twang2218/node-cba-netbank.git"
-	},
-	"keywords": [
-		"api",
-		"netbank",
-		"cba",
-		"commonwealth bank australia"
-	],
-	"author": "Tao Wang <twang2218@gmail.com>",
-	"license": "Apache-2.0",
-	"bugs": {
-		"url": "https://github.com/twang2218/node-cba-netbank/issues"
-	},
-	"homepage": "https://github.com/twang2218/node-cba-netbank"
+  "name": "node-cba-netbank",
+  "version": "0.5.0",
+  "description": "Unofficial Commonwealth Bank Australia Netbank API Wrapper for Node.js",
+  "main": "lib/index.js",
+  "bin": "bin/node-cba-netbank.js",
+  "directories": {
+    "lib": "./lib"
+  },
+  "dependencies": {
+    "bluebird": "^3.5.0",
+    "cheerio": "^0.19.0",
+    "collections": "^3.0.0",
+    "debug": "^2.6.8",
+    "inquirer": "^0.11.1",
+    "moment": "^2.11.0",
+    "request": "^2.81.0",
+    "request-promise": "^4.2.1",
+    "string": "^3.3.1"
+  },
+  "devDependencies": {
+    "babel-cli": "^6.24.1",
+    "babel-core": "^6.25.0",
+    "babel-eslint": "^7.2.3",
+    "babel-jest": "^20.0.3",
+    "babel-loader": "^7.0.0",
+    "babel-plugin-add-module-exports": "^0.2.1",
+    "babel-preset-es2015": "^6.24.1",
+    "chai": "^3.4.1",
+    "coveralls": "^2.11.6",
+    "eslint": "^3.19.0",
+    "eslint-config-airbnb-base": "^11.2.0",
+    "eslint-loader": "^1.8.0",
+    "eslint-plugin-import": "^2.3.0",
+    "istanbul": "^0.4.1",
+    "istanbul-coveralls": "^1.0.3",
+    "jest": "^20.0.4",
+    "jest-cli": "^20.0.4",
+    "mocha": "^2.3.4",
+    "mocha-jscs": "^4.0.0",
+    "mocha-jshint": "^2.2.6",
+    "mocha-lcov-reporter": "1.0.0",
+    "nock": "^5.2.1",
+    "regenerator-runtime": "^0.10.5",
+    "webpack": "^2.6.1",
+    "yargs": "^8.0.2"
+  },
+  "scripts": {
+    "build": "webpack --env build",
+    "dev": "webpack --progress --colors --watch --env dev",
+    "jest": "jest test",
+    "test": "npm run test-istabul-mocha && npm run test-istabul-coverage",
+    "test-istabul-mocha": "istanbul cover _mocha --report lcovonly -- -R spec",
+    "test-istabul-coverage": "istanbul check-coverage",
+    "test-coveralls": "npm run test-coveralls-run && npm run test-coveralls-clean",
+    "test-coveralls-run": "cat ./coverage/lcov.info | coveralls",
+    "test-coveralls-clean": "rm -rf ./coverage",
+    "clean": "rm -rf log/*.{html,txt,json}"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/twang2218/node-cba-netbank.git"
+  },
+  "keywords": [
+    "api",
+    "netbank",
+    "cba",
+    "commonwealth bank australia"
+  ],
+  "author": "Tao Wang <twang2218@gmail.com>",
+  "license": "Apache-2.0",
+  "bugs": {
+    "url": "https://github.com/twang2218/node-cba-netbank/issues"
+  },
+  "homepage": "https://github.com/twang2218/node-cba-netbank"
 }

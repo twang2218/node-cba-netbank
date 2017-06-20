@@ -1,103 +1,118 @@
+/* eslint-disable no-undef */
+
 // Dependencies
-var expect = require('chai').expect;
-var web = require('../lib/web');
-var nock = require('nock');
+const web = require('../src/web');
+const nock = require('nock');
 
-describe('web.js', function () {
-	//  create a simple parser to use
-	function simpleParser(url, page, callback) {
-		expect(page).to.equal('Hello from Google!');
-		callback(null, url, page.split(' '));
-	}
+//  create a simple parser to use
+function parser(resp) {
+  expect(resp.body).toEqual('Hello from Google!');
+  return Object.assign(resp, { data: resp.body.split(' ') });
+}
 
-	//  create a simple callback to use
-	function simpleCallback(error, url, words) {
-		if (error) {
-			throw error
-		}
-		expect(words).to.eql(['Hello', 'from', 'Google!']);
-	}
+//  create a simple consumer
+function processor(resp) {
+  expect(resp.data).toEqual(['Hello', 'from', 'Google!']);
+  return resp;
+}
 
-	before(function () {
-		nock.disableNetConnect();
-	})
+describe('web.js', () => {
+  describe('- get()', () => {
+    beforeEach(() => nock.disableNetConnect());
+    afterEach(() => nock.cleanAll());
 
-	describe('- get()', function () {
-		it('should get a page, run parser, call back', function (done) {
-			var commbank = nock('https://www.my.commbank.com.au')
-				.get('/')
-				.reply(200, 'Hello from Google!');
+    test('should get a page, run parser, call back', (done) => {
+      const commbank = nock('https://www.my.commbank.com.au')
+        .get('/')
+        .reply(200, 'Hello from Google!');
 
-			web.get({
-				url: 'https://www.my.commbank.com.au/'
-			}, simpleParser, function (error, url, words) {
-				simpleCallback(error, url, words);
-				commbank.done();
-				done();
-			});
-		});
-		it('should raise error if request failed.', function (done) {
-			var commbank = nock('https://www.my.commbank.com.au')
-				.get('/')
-				.replyWithError("something awful happened");
+      web.get('https://www.my.commbank.com.au/')
+        .then(parser)
+        .then(processor)
+        .then(() => {
+          commbank.done();
+          done();
+        });
+    });
 
-			web.get({
-				url: 'https://www.my.commbank.com.au/'
-			}, simpleParser, function (error, url, words) {
-				expect(error).not.to.be.null;
-				commbank.done();
-				done();
-			});
-		});
-	});
+    test('should raise error if request failed.', (done) => {
+      const commbank = nock('https://www.my.commbank.com.au')
+        .get('/')
+        .replyWithError('something awful happened');
 
-	describe('- post()', function () {
-		it('should post a form, parse the page, and call back', function (done) {
-			var commbank = nock('https://www.my.commbank.com.au')
-				.post('/users', function (body) {
-					expect(body.username).to.equal('johndoe');
-					expect(body.password).to.equal('123456');
+      web.get('https://www.my.commbank.com.au/')
+        .then(parser)
+        .then(processor)
+        .catch((error) => {
+          expect(error).not.toBeNull();
+          commbank.done();
+          done();
+        });
+    });
+  });
 
-					return (body.username === 'johndoe' && body.password === '123456');
-				}).reply(200, "Hello from Google!");
+  describe('- post()', () => {
+    beforeEach(() => nock.disableNetConnect());
+    afterEach(() => nock.cleanAll());
 
-			web.post({
-				url: 'https://www.my.commbank.com.au/users',
-				form: {
-					username: 'johndoe',
-					password: '123456'
-				}
-			}, simpleParser, function (error, url, words) {
-				simpleCallback(error, url, words);
-				commbank.done();
-				done();
-			});
-		});
-		it('should raise error if request failed.', function (done) {
-			var commbank = nock('https://www.my.commbank.com.au')
-				.post('/users', function (body) {
-					expect(body.username).to.equal('johndoe');
-					expect(body.password).to.equal('123456');
+    test('should post a form, parse the page, and call back', (done) => {
+      const commbank = nock('https://www.my.commbank.com.au')
+        .post('/users', (body) => {
+          expect(body.username).toEqual('johndoe');
+          expect(body.password).toEqual('123456');
+          return (body.username === 'johndoe' && body.password === '123456');
+        })
+        .reply(200, 'Hello from Google!');
 
-					return (body.username === 'johndoe' && body.password === '123456');
-				}).replyWithError("something awful happened");
+      web.post({
+        url: 'https://www.my.commbank.com.au/users',
+        form: {
+          username: 'johndoe',
+          password: '123456',
+        },
+      })
+        .then(parser)
+        .then(processor)
+        .then(() => {
+          commbank.done();
+          done();
+        });
+    });
 
-			web.post({
-				url: 'https://www.my.commbank.com.au/users',
-				form: {
-					username: 'johndoe',
-					password: '123456'
-				}
-			}, simpleParser, function (error, url, words) {
-				expect(error).not.to.be.null;
-				commbank.done();
-				done();
-			});
+    test('should raise error if request failed.', (done) => {
+      const commbank = nock('https://www.my.commbank.com.au')
+        .post('/users', (body) => {
+          expect(body.username).toEqual('johndoe');
+          expect(body.password).toEqual('123456');
+          return (body.username === 'johndoe' && body.password === '123456');
+        })
+        .replyWithError('something awful happened');
 
-		});
-	});
+      web.post({
+        url: 'https://www.my.commbank.com.au/users',
+        form: {
+          username: 'johndoe',
+          password: '123456',
+        },
+      })
+        .then(parser)
+        .then(processor)
+        .catch((error) => {
+          expect(error).not.toBeNull();
+          commbank.done();
+          done();
+        });
+    });
+  });
 
-	after(function () {
-		nock.cleanAll();
-	});
+  describe('- real world access', () => {
+    beforeEach(() => nock.enableNetConnect());
+    test('www.google.com', (done) => {
+      web.get('https://www.google.com')
+        .then((resp) => {
+          expect(resp.body.indexOf('<title>Google</title>')).toBeGreaterThan(-1);
+          done();
+        });
+    });
+  });
 });

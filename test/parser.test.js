@@ -1,444 +1,395 @@
+/* eslint-disable no-undef */
+
 // Dependencies
-var expect = require('chai').expect;
-var parser = require('../lib/parser');
-var fs = require('fs');
-var path = require('path');
-var moment = require('moment');
+const parser = require('../src/parser');
+const fs = require('fs');
+const path = require('path');
+const moment = require('moment');
 
 function load(filename) {
-	return fs.readFileSync(
-		path.resolve(path.resolve(__dirname, 'test_cases'), filename)
-	).toString();
+  return fs.readFileSync(path.resolve(path.resolve(__dirname, 'test_cases'), filename)).toString();
 }
 
-describe('parser.js', function () {
-	var pages = {};
-	var links = {};
+const pages = {
+  //  login page
+  login: load('01-login-page.html'),
+  //  account list page
+  homePage: load('02-home-page.html'),
+  //  transactions page
+  transactionList: load('03-transaction-page.html'),
+  //  partial transactions page
+  transactionPartial: load('04-transaction-partial.txt'),
+  //  transaction json - case 1
+  transactionJson1: load('transaction-1.json'),
+  //  transaction json - case 2
+  transactionJson2: load('transaction-2.json'),
+  //  transaction json - case 3
+  transactionJson3: load('transaction-3.json'),
+};
 
-	before(function () {
-		//  login page
-		pages.login = load('01-login-page.html');
-		//  account list page
-		pages.homePage = load('02-home-page.html');
-		//  transactions page
-		pages.transactionList = load('03-transaction-page.html');
-		//  transactions page
-		pages.transactionPartial = load('04-transaction-partial.txt');
-		//	transaction json - case 1
-		pages.transactionJson1 = load('transaction-1.json');
-		//	transaction json - case 2
-		pages.transactionJson2 = load('transaction-2.json');
-		//	transaction json - case 3
-		pages.transactionJson3 = load('transaction-3.json');
+const links = {
+  login: 'https://www.my.commbank.com.au/netbank/Logon/Logon.aspx',
+  home: '/netbank/Portfolio/Home/Home.aspx',
+  history: 'https://www.my.commbank.com.au/netbank/TransactionHistory/History.aspx',
+};
 
-		links.login = 'https://www.my.commbank.com.au/netbank/Logon/Logon.aspx';
-		links.home = '/netbank/Portfolio/Home/Home.aspx';
-		links.history =
-			'https://www.my.commbank.com.au/netbank/TransactionHistory/History.aspx';
-	});
+describe('parser.js', () => {
+  describe('- parseForm()', () => {
+    function parseForm(body = pages.transactionList) {
+      return parser.parseForm({ url: links.login, body })
+        .then((resp) => {
+          expect(resp.url).toEqual(links.login);
+          return resp;
+        });
+    }
 
-	describe('- parseForm()', function () {
-		var formLogin = {};
-		var formTransaction = {};
+    test('should be able parse the properties', () => {
+      expect.assertions(10);
+      return expect(parseForm(pages.login)
+        .then((resp) => {
+          expect(resp.form).toHaveProperty('RID');
+          expect(resp.form).toHaveProperty('SID');
+          expect(resp.form).toHaveProperty('cid');
+          expect(resp.form).toHaveProperty('rqid');
+          expect(resp.form).toHaveProperty('__VIEWSTATE');
+          expect(resp.form).toHaveProperty('txtMyClientNumber$field');
+          expect(resp.form).toHaveProperty('txtMyPassword$field');
+          expect(Object.keys(resp.form).length).toEqual(12);
+          return resp;
+        })).resolves.toBeDefined();
+    });
+    test('should parse the value of properties', () => {
+      expect.assertions(5);
+      return expect(parseForm(pages.login)
+        .then((resp) => {
+          expect(resp.form.RID).toEqual('TsFbWpAhjU6Q6Ub1pWwQEQ');
+          expect(resp.form.btnLogon$field).toEqual('LOG ON');
+          expect(resp.form.txtMyClientNumber$field).toEqual('');
+          return resp;
+        })).resolves.toBeDefined();
+    });
+    test('should parse <input type="radio" ...>', () => {
+      expect.assertions(4);
+      return expect(parseForm(pages.transactionList)
+        .then((resp) => {
+          expect(resp.form.ctl00$BodyPlaceHolder$radioSwitchSearchType$field$).toEqual(
+            'AllTransactions');
+          expect(resp.form.ctl00$BodyPlaceHolder$radioSwitchDateRange$field$).toEqual('TimePeriod');
+          return resp;
+        })).resolves.toBeDefined();
+    });
+    test('should parse <input type="checkbox" ...>', () => {
+      expect.assertions(4);
+      return expect(parseForm(pages.transactionList)
+        .then((resp) => {
+          expect(resp.form.ctl00$ContentHeaderPlaceHolder$chkTxnScrolling$field).toEqual('on');
+          expect(resp.form.ctl00$ContentHeaderPlaceHolder$chkMergeCreditDebit$field).toEqual('on');
+          return resp;
+        })).resolves.toBeDefined();
+    });
+    test('should parse <select><option ...>...</select>', () => {
+      expect.assertions(4);
+      return expect(parseForm(pages.transactionList)
+        .then((resp) => {
+          expect(resp.form.ctl00$ContentHeaderPlaceHolder$ddlAccount$field)
+            .toEqual('5218921743830977,MCD,True,True,True,False,True,False,True,False');
+          expect(resp.form.ctl00$BodyPlaceHolder$ddlDateRange$field).toEqual('3');
+          return resp;
+        })).resolves.toBeDefined();
+    });
+    test('should raise error if there is no form in the page', () => {
+      expect.assertions(1);
+      return expect(parseForm(pages.transactionPartial)).rejects.toBeDefined();
+    });
+  });
 
-		before(function () {
-			parser.parseForm(links.login, pages.login, function (error, url, form) {
-				expect(error).to.be.null;
-				expect(url).to.equal(links.login);
-				formLogin = form;
-			});
-			parser.parseForm(links.history, pages.transactionList, function (error,
-				url, form) {
-				expect(error).to.be.null;
-				expect(url).to.equal(links.history);
-				formTransaction = form;
-			});
-		});
-		it('should be able parse the properties', function () {
-			expect(formLogin).to.have.property('RID');
-			expect(formLogin).to.have.property('SID');
-			expect(formLogin).to.have.property('cid');
-			expect(formLogin).to.have.property('rqid');
-			expect(formLogin).to.have.property('__VIEWSTATE');
-			expect(formLogin).to.have.property('txtMyClientNumber$field');
-			expect(formLogin).to.have.property('txtMyPassword$field');
-			expect(Object.keys(formLogin).length).to.equal(12);
-		});
-		it('should parse the value of properties', function () {
-			expect(formLogin.RID).to.equal('TsFbWpAhjU6Q6Ub1pWwQEQ');
-			expect(formLogin.btnLogon$field).to.equal('LOG ON');
-			expect(formLogin.txtMyClientNumber$field).to.equal('');
-		});
-		it('should parse <input type="radio" ...>', function () {
-			expect(formTransaction.ctl00$BodyPlaceHolder$radioSwitchSearchType$field$)
-				.to.equal('AllTransactions');
-			expect(formTransaction.ctl00$BodyPlaceHolder$radioSwitchDateRange$field$)
-				.to.equal('TimePeriod');
-		});
-		it('should parse <input type="checkbox" ...>', function () {
-			expect(formTransaction.ctl00$ContentHeaderPlaceHolder$chkTxnScrolling$field)
-				.to.equal('on');
-			expect(formTransaction.ctl00$ContentHeaderPlaceHolder$chkMergeCreditDebit$field)
-				.to.equal('on');
-		});
-		it('should parse <select><option ...>...</select>', function () {
-			expect(formTransaction.ctl00$ContentHeaderPlaceHolder$ddlAccount$field)
-				.to.equal(
-					'5218921743830977,MCD,True,True,True,False,True,False,True,False'
-				);
-			expect(formTransaction.ctl00$BodyPlaceHolder$ddlDateRange$field)
-				.to.equal('3');
-		});
-		it('should raise error if there is no form in the page', function (done) {
-			parser.parseForm(links.history, pages.transactionPartial, function (
-				error, url, form) {
-				expect(error).not.to.be.null;
-				done();
-			});
-		});
-	});
+  describe('- parseAccountList()', () => {
+    test('should parse account list', () => {
+      expect.assertions(27);
+      return expect(
+        parser.parseAccountList({ url: links.home, body: pages.homePage })
+        .then((resp) => {
+          expect(resp.url).toEqual(links.home);
 
-	describe('- parseAccountList()', function () {
-		it('should parse account list', function (done) {
-			parser.parseAccountList(links.home, pages.homePage, function (error,
-				url, accounts) {
-				expect(error).to.be.null;
-				expect(url).to.equal(links.home);
+          expect(resp.accounts.length).toEqual(4);
 
-				expect(accounts.length).to.equal(4);
+          expect(resp.accounts[0].nickname).toEqual('Smart Access');
+          expect(resp.accounts[0].bsbNumber).toEqual('06 2338');
+          expect(resp.accounts[0].accountNumber).toEqual('5282 0634');
+          expect(resp.accounts[0].number).toEqual('06233852820634');
+          expect(resp.accounts[0].balance).toEqual(23.45);
+          expect(resp.accounts[0].availableFunds).toEqual(-23.45);
 
-				expect(accounts[0].nickname).to.equal('Smart Access');
-				expect(accounts[0].bsbNumber).to.equal('06 2338');
-				expect(accounts[0].accountNumber).to.equal('5282 0634');
-				expect(accounts[0].number).to.equal('06233852820634');
-				expect(accounts[0].balance).to.equal(23.45);
-				expect(accounts[0].availableFunds).to.equal(-23.45);
+          expect(resp.accounts[1].nickname).toEqual('NetBank Saver');
+          expect(resp.accounts[1].bsbNumber).toEqual('06 2438');
+          expect(resp.accounts[1].accountNumber).toEqual('5287 0642');
+          expect(resp.accounts[1].number).toEqual('06243852870642');
+          expect(resp.accounts[1].balance).toEqual(1234.50);
+          expect(resp.accounts[1].availableFunds).toEqual(234.50);
 
-				expect(accounts[1].nickname).to.equal('NetBank Saver');
-				expect(accounts[1].bsbNumber).to.equal('06 2438');
-				expect(accounts[1].accountNumber).to.equal('5287 0642');
-				expect(accounts[1].number).to.equal('06243852870642');
-				expect(accounts[1].balance).to.equal(1234.50);
-				expect(accounts[1].availableFunds).to.equal(234.50);
+          expect(resp.accounts[2].nickname).toEqual('GoalSaver');
+          expect(resp.accounts[2].bsbNumber).toEqual('06 2860');
+          expect(resp.accounts[2].accountNumber).toEqual('1000 6652');
+          expect(resp.accounts[2].number).toEqual('06286010006652');
+          expect(resp.accounts[2].balance).toEqual(76543.00);
+          expect(resp.accounts[2].availableFunds).toEqual(76043.00);
 
-				expect(accounts[2].nickname).to.equal('GoalSaver');
-				expect(accounts[2].bsbNumber).to.equal('06 2860');
-				expect(accounts[2].accountNumber).to.equal('1000 6652');
-				expect(accounts[2].number).to.equal('06286010006652');
-				expect(accounts[2].balance).to.equal(76543.00);
-				expect(accounts[2].availableFunds).to.equal(76043.00);
+          expect(resp.accounts[3].nickname).toEqual('MasterCard Platinum');
+          expect(resp.accounts[3].bsbNumber).toEqual('');
+          expect(resp.accounts[3].accountNumber).toEqual('5218 9217 4383 0977');
+          expect(resp.accounts[3].number).toEqual('5218921743830977');
+          expect(resp.accounts[3].balance).toEqual(-123.45);
+          expect(resp.accounts[3].availableFunds).toEqual(12345.67);
 
-				expect(accounts[3].nickname).to.equal(
-					'MasterCard Platinum');
-				expect(accounts[3].bsbNumber).to.equal('');
-				expect(accounts[3].accountNumber).to.equal(
-					'5218 9217 4383 0977');
-				expect(accounts[3].number).to.equal('5218921743830977');
-				expect(accounts[3].balance).to.equal(-123.45);
-				expect(accounts[3].availableFunds).to.equal(12345.67);
+          return resp;
+        })).resolves.toBeDefined();
+    });
 
-				done();
-			});
-		});
+    test('should raise error if there is no account list in the page', () => {
+      expect.assertions(1);
+      return expect(parser.parseAccountList({ url: links.login, body: pages.login }))
+        .rejects.toBeDefined();
+    });
+  });
 
-		it('should raise error if there is no account list in the page', function (
-			done) {
-			parser.parseAccountList(links.login, pages.login, function (error,
-				accounts) {
-				expect(error).not.to.be.null;
-				done();
-			});
-		});
-	});
+  describe('- parseHomePage()', () => {
+    test('should parse the submit form and account list', () => {
+      expect.assertions(6);
+      return expect(parser.parseHomePage({ url: links.home, body: pages.homePage })
+        .then((resp) => {
+          expect(resp.url).toEqual(links.home);
 
-	describe('- parseHomePage()', function () {
-		it('should parse the submit form and account list', function (done) {
-			parser.parseHomePage(links.home, pages.homePage, function (error, url,
-				form, accounts) {
-				expect(error).to.be.null;
-				expect(url).to.equal(links.home);
+          expect(resp.form).toHaveProperty('RID');
+          expect(resp.form).toHaveProperty('SID');
+          expect(resp.form).toHaveProperty('__EVENTVALIDATION');
+          expect(resp.accounts.length).toEqual(4);
 
-				expect(form).to.have.property('RID');
-				expect(form).to.have.property('SID');
-				expect(form).to.have.property('__EVENTVALIDATION');
-				expect(accounts.length).to.equal(4);
+          return resp;
+        })).resolves.toBeDefined();
+    });
+    test('should raise error if fail to parse the account list in the home page.', () => {
+      expect.assertions(1);
+      return expect(parser.parseHomePage({ url: links.login, body: pages.login }))
+        .rejects.toBeDefined();
+    });
+    test('should raise error if fail to parse the page at all', () => {
+      expect.assertions(1);
+      return expect(parser.parseHomePage({ url: links.login, body: pages.transactionPartial }))
+        .rejects.toBeDefined();
+    });
+  });
 
-				done();
-			});
-		});
-		it(
-			'should raise error if fail to parse the account list in the home page.',
-			function (done) {
-				parser.parseHomePage(links.login, pages.login, function (error, url,
-					form, accounts) {
-					expect(error).not.to.be.null;
-					done();
-				});
-			});
-		it('should raise error if fail to parse the page at all', function (done) {
-			parser.parseHomePage(links.login, pages.transactionPartial, function (
-				error, url, form, accounts) {
-				expect(error).not.to.be.null;
-				done();
-			});
-		});
-	});
+  describe('- parseCurrency()', () => {
+    const sampleCurrencies = [
+      { text: '$12.34', number: 12.34 },
+      { text: '12.34', number: 12.34 },
+      { text: '$123,456.78', number: 123456.78 },
+      { text: '$123,234.34 CR', number: 123234.34 },
+      { text: '$1,234.56 DR', number: -1234.56 },
+    ];
 
-	describe('- parseCurrency()', function () {
-		var sampleCurrencies = [{
-			text: '$12.34',
-			number: 12.34
-		}, {
-			text: '12.34',
-			number: 12.34
-		}, {
-			text: '$123,456.78',
-			number: 123456.78
-		}, {
-			text: '$123,234.34 CR',
-			number: 123234.34
-		}, {
-			text: '$1,234.56 DR',
-			number: -1234.56
-		}];
+    sampleCurrencies.forEach((c) => {
+      test(`should parse "${c.text}"`, () => {
+        expect(parser.parseCurrency(c.text)).toEqual(c.number);
+      });
+    });
+  });
 
-		for (var index in sampleCurrencies) {
-			var c = sampleCurrencies[index];
-			it('should parse "' + c.text + '"', function () {
-				var n = parser.parseCurrency(c.text);
-				expect(n).to.equal(c.number);
-			});
-		}
-	});
+  describe('- extractTransactionJsonArray()', () => {
+    test('should extract transactions JSON array from html', () => {
+      const json = parser.extractTransactionJsonArray(pages.transactionList);
+      expect(json.length).toEqual(59);
+      const t1 = json[0];
+      expect(t1.Date.Text).toEqual('27 Apr 2015');
+      expect(t1.Description.Text).toEqual('EWAY ELECTRONIC TOLL     HAMMONDVILLE');
+      expect(t1.Amount.Text).toEqual('$100.75 DR');
+      expect(t1.TranCode.Text).toEqual('00 05');
+    });
+    test('should parse transactions JSON array from partial callback', () => {
+      const json = parser.extractTransactionJsonArray(pages.transactionPartial);
+      expect(json.length).toEqual(40);
+      const t1 = json[0];
+      expect(t1.Date.Sort[1]).toEqual('201412050743384149731');
+      expect(t1.Date.Text).toEqual('05 Dec 2014');
+      expect(t1.Description.Text).toEqual('Transfer to xx1060 CommBank app');
+      expect(t1.Amount.Text).toEqual('$30.00 DR');
+      expect(t1.Balance.Text).toEqual('$25.68 CR');
+      expect(t1.TranCode.Text).toEqual('550085');
+      expect(t1.ReceiptNumber.Text).toEqual('N120548420145');
+    });
+    test('should return null if cannot parse the page', () => {
+      const json = parser.extractTransactionJsonArray(pages.login);
+      expect(json).toBeNull();
+    });
+  });
 
-	describe('- extractTransactionJsonArray()', function () {
-		it('should extract transactions JSON array from html', function () {
-			var json = parser.extractTransactionJsonArray(pages.transactionList);
-			expect(json.length).to.equal(59);
-			var t1 = json[0];
-			expect(t1.Date.Text).to.equal('27 Apr 2015');
-			expect(t1.Description.Text).to.equal(
-				'EWAY ELECTRONIC TOLL     HAMMONDVILLE');
-			expect(t1.Amount.Text).to.equal('$100.75 DR');
-			expect(t1.TranCode.Text).to.equal('00 05');
-		});
-		it('should parse transactions JSON array from partial callback',
-			function (done) {
-				var json = parser.extractTransactionJsonArray(pages
-					.transactionPartial);
-				expect(json.length).to.equal(40);
-				var t1 = json[0];
-				expect(t1.Date.Sort[1]).to.equal('201412050743384149731');
-				expect(t1.Date.Text).to.equal('05 Dec 2014');
-				expect(t1.Description.Text).to.equal(
-					'Transfer to xx1060 CommBank app');
-				expect(t1.Amount.Text).to.equal('$30.00 DR');
-				expect(t1.Balance.Text).to.equal('$25.68 CR');
-				expect(t1.TranCode.Text).to.equal('550085');
-				expect(t1.ReceiptNumber.Text).to.equal('N120548420145');
+  describe('- parseJsonToTransaction()', () => {
+    test('should parse JSON to Transaction object - case 1', () => {
+      const json = JSON.parse(pages.transactionJson1);
+      const t = parser.parseJsonToTransaction(json);
+      expect(t).not.toBeNull();
+      const date = moment(t.timestamp).utc();
+      expect(date.year()).toEqual(2014);
+      expect(date.month()).toEqual(10);
+      expect(date.date()).toEqual(30);
+      expect(date.hours()).toEqual(20);
+      expect(date.minutes()).toEqual(26);
+      expect(date.seconds()).toEqual(19);
+      expect(date.milliseconds()).toEqual(488);
 
-				done();
-			});
-		it('should return null if cannot parse the page', function (done) {
-			var json = parser.extractTransactionJsonArray(pages.login);
-			expect(json).to.be.null;
-			done();
-		});
-	});
+      expect(t.description).toEqual('Credit Interest');
+      expect(t.amount).toEqual(0.01);
+      expect(t.balance).toEqual(5.68);
+      expect(t.trancode).toEqual('700000');
+      expect(t.receiptnumber).toEqual('');
+    });
+    test('should parse JSON to Transaction object - case 2', () => {
+      const json = JSON.parse(pages.transactionJson2);
+      const t = parser.parseJsonToTransaction(json);
+      expect(t).not.toBeNull();
+      const date = moment(t.timestamp).utc();
+      expect(date.year()).toEqual(2014);
+      expect(date.month()).toEqual(10);
+      expect(date.date()).toEqual(20);
+      expect(date.hours()).toEqual(8);
+      expect(date.minutes()).toEqual(16);
+      expect(date.seconds()).toEqual(41);
+      expect(date.milliseconds()).toEqual(306);
 
-	describe('- parseJsonToTransaction()', function () {
-		it('should parse JSON to Transaction object - case 1', function (done) {
-			var json = JSON.parse(pages.transactionJson1);
-			var t = parser.parseJsonToTransaction(json);
+      expect(t.description).toEqual('Transfer to xx1060 CommBank app');
+      expect(t.amount).toEqual(-100);
+      expect(t.balance).toEqual(20.67);
+      expect(t.trancode).toEqual('550085');
+      expect(t.receiptnumber).toEqual('N112044272766');
+    });
+    test('should parse JSON to Transaction object - case 3', () => {
+      const json = JSON.parse(pages.transactionJson3);
+      const t = parser.parseJsonToTransaction(json);
+      expect(t).not.toBeNull();
+      const date = moment(t.timestamp).utc();
+      expect(date.year()).toEqual(2015);
+      expect(date.month()).toEqual(3);
+      expect(date.date()).toEqual(25);
+      expect(date.hours()).toEqual(0);
+      expect(date.minutes()).toEqual(0);
+      expect(date.seconds()).toEqual(0);
+      expect(date.milliseconds()).toEqual(3);
 
-			var date = moment(t.timestamp).utc();
-			expect(date.year()).to.equal(2014);
-			expect(date.month()).to.equal(10);
-			expect(date.date()).to.equal(30);
-			expect(date.hours()).to.equal(20);
-			expect(date.minutes()).to.equal(26);
-			expect(date.seconds()).to.equal(19);
-			expect(date.milliseconds()).to.equal(488);
+      expect(t.description).toEqual('DAMS APPLE AT THE STAT   HURSTVILLE');
+      expect(t.amount).toEqual(-19.72);
+      expect(t.balance).toEqual(0);
+      expect(t.trancode).toEqual('00 05');
+      expect(t.receiptnumber).toEqual('');
+    });
+    test('should return null rather than raise error if given json is not parsable', () => {
+      const json = JSON.parse('{"it":"is not transaction"}');
+      const t = parser.parseJsonToTransaction(json);
+      expect(t).toBeNull();
+    });
+  });
 
-			expect(t.description).to.equal('Credit Interest');
-			expect(t.amount).to.equal(0.01);
-			expect(t.balance).to.equal(5.68);
-			expect(t.trancode).to.equal('700000');
-			expect(t.receiptnumber).to.equal('');
+  describe('- parseTransactions()', () => {
+    test('should parse a page to transction object array', () => {
+      expect.assertions(14);
+      return expect(parser.parseTransactions({ url: links.history, body: pages.transactionList })
+        .then((resp) => {
+          expect(resp.url).toEqual(links.history);
 
-			done();
-		});
-		it('should parse JSON to Transaction object - case 2', function (done) {
-			var json = JSON.parse(pages.transactionJson2);
-			var t = parser.parseJsonToTransaction(json);
+          expect(resp.transactions.length).toEqual(59);
+          expect(moment(resp.transactions[0].timestamp).utc().year()).toEqual(2015);
+          expect(moment(resp.transactions[1].timestamp).utc().month()).toEqual(3);
+          expect(moment(resp.transactions[2].timestamp).utc().date()).toEqual(25);
+          expect(moment(resp.transactions[3].timestamp).utc().hours()).toEqual(0);
+          expect(moment(resp.transactions[4].timestamp).utc().minutes()).toEqual(0);
+          expect(moment(resp.transactions[5].timestamp).utc().seconds()).toEqual(0);
+          expect(resp.transactions[6].description).toEqual('INTEREST CHARGES');
+          expect(resp.transactions[7].amount).toEqual(-5.5);
+          expect(resp.transactions[8].balance).toEqual(0);
+          expect(resp.transactions[9].trancode).toEqual('00 05');
+          expect(resp.transactions[10].receiptnumber).toEqual('');
 
-			var date = moment(t.timestamp).utc();
-			expect(date.year()).to.equal(2014);
-			expect(date.month()).to.equal(10);
-			expect(date.date()).to.equal(20);
-			expect(date.hours()).to.equal(8);
-			expect(date.minutes()).to.equal(16);
-			expect(date.seconds()).to.equal(41);
-			expect(date.milliseconds()).to.equal(306);
+          return resp;
+        })).resolves.toBeDefined();
+    });
+    test('should parse a PARTIAL page to transction object array', () => {
+      expect.assertions(14);
+      return expect(parser.parseTransactions({ url: links.history, body: pages.transactionPartial })
+        .then((resp) => {
+          expect(resp.url).toEqual(links.history);
 
-			expect(t.description).to.equal(
-				'Transfer to xx1060 CommBank app');
-			expect(t.amount).to.equal(-100);
-			expect(t.balance).to.equal(20.67);
-			expect(t.trancode).to.equal('550085');
-			expect(t.receiptnumber).to.equal('N112044272766');
+          expect(resp.transactions.length).toEqual(40);
+          expect(moment(resp.transactions[0].timestamp).utc().year()).toEqual(2014);
+          expect(moment(resp.transactions[1].timestamp).utc().month()).toEqual(11);
+          expect(moment(resp.transactions[2].timestamp).utc().date()).toEqual(3);
+          expect(moment(resp.transactions[3].timestamp).utc().hours()).toEqual(20);
+          expect(moment(resp.transactions[4].timestamp).utc().minutes()).toEqual(52);
+          expect(moment(resp.transactions[5].timestamp).utc().seconds()).toEqual(15);
+          expect(resp.transactions[6].description).toEqual('Transfer to xx1060 CommBank app');
+          expect(resp.transactions[7].amount).toEqual(-600);
+          expect(resp.transactions[8].balance).toEqual(680.67);
+          expect(resp.transactions[9].trancode).toEqual('550085');
+          expect(resp.transactions[10].receiptnumber).toEqual('N112744391641');
 
-			done();
-		});
-		it('should parse JSON to Transaction object - case 3', function (done) {
-			var json = JSON.parse(pages.transactionJson3);
-			var t = parser.parseJsonToTransaction(json);
+          return resp;
+        })).resolves.toBeDefined();
+    });
+    test('should raise error if it cannot parse the page', () => {
+      expect.assertions(1);
+      return expect(parser.parseTransactions({ url: links.login, body: pages.login }))
+        .rejects.toBeDefined();
+    });
+  });
 
-			var date = moment(t.timestamp).utc();
-			expect(date.year()).to.equal(2015);
-			expect(date.month()).to.equal(3);
-			expect(date.date()).to.equal(25);
-			expect(date.hours()).to.equal(0);
-			expect(date.minutes()).to.equal(0);
-			expect(date.seconds()).to.equal(0);
-			expect(date.milliseconds()).to.equal(3);
+  describe('- parseAccountKeys()', () => {
+    test('should parse account list with the key of form', () => {
+      expect.assertions(7);
+      return expect(parser.parseAccountKeys({ url: links.history, body: pages.transactionList })
+        .then((resp) => {
+          expect(resp.url).toEqual(links.history);
 
-			expect(t.description).to.equal(
-				'DAMS APPLE AT THE STAT   HURSTVILLE');
-			expect(t.amount).to.equal(-19.72);
-			expect(t.balance).to.equal(0);
-			expect(t.trancode).to.equal('00 05');
-			expect(t.receiptnumber).to.equal('');
+          expect(resp.accounts.length).toEqual(4);
+          expect(resp.accounts[0].nickname).toEqual('Smart Access');
+          expect(resp.accounts[1].number).toEqual('06243852870642');
+          expect(resp.accounts[2].key).toEqual(
+            '286010006652,DDA,True,False,False,True,True,False,True,False');
+          expect(resp.accounts[3].key).toEqual(
+            '5218921743830977,MCD,True,True,True,False,True,False,True,False');
 
-			done();
-		});
-		it('should raise error if given json is not parsable', function (done) {
-			var json = JSON.parse('{"it":"is not transaction"}');
-			var t = parser.parseJsonToTransaction(json);
-			expect(t).to.be.null;
+          return resp;
+        })).resolves.toBeDefined();
+    });
+    test('should raise error if there is no account list options in the page', () => {
+      expect.assertions(1);
+      return expect(parser.parseAccountKeys({ url: links.login, body: pages.login }))
+        .rejects.toBeDefined();
+    });
+  });
 
-			done();
-		});
-	});
+  describe('- parseTransactionPage()', () => {
+    test('should parse the transaction page and get form, transactions and keys', () => {
+      expect.assertions(5);
+      return expect(parser.parseTransactionPage({ url: links.history, body: pages.transactionList })
+        .then((resp) => {
+          expect(resp.url).toEqual(links.history);
 
-	describe('- parseTransactions()', function () {
-		it('should parse a page to transction object array', function (done) {
-			parser.parseTransactions(links.history, pages.transactionList,
-				function (error, url, trans) {
-					expect(error).to.be.null;
-					expect(url).to.equal(links.history);
+          expect(Object.keys(resp.form).length).toEqual(40);
+          expect(resp.transactions.length).toEqual(59);
+          expect(resp.accounts.length).toEqual(4);
 
-					expect(trans.length).to.equal(59);
-					expect(moment(trans[0].timestamp).utc().year()).to.equal(2015);
-					expect(moment(trans[1].timestamp).utc().month()).to.equal(3);
-					expect(moment(trans[2].timestamp).utc().date()).to.equal(25);
-					expect(moment(trans[3].timestamp).utc().hours()).to.equal(0);
-					expect(moment(trans[4].timestamp).utc().minutes()).to.equal(0);
-					expect(moment(trans[5].timestamp).utc().seconds()).to.equal(0);
-					expect(trans[6].description).to.equal('INTEREST CHARGES');
-					expect(trans[7].amount).to.equal(-5.5);
-					expect(trans[8].balance).to.equal(0);
-					expect(trans[9].trancode).to.equal('00 05');
-					expect(trans[10].receiptnumber).to.equal('');
-
-					done();
-				});
-		});
-		it('should parse a PARTIAL page to transction object array',
-			function (done) {
-				parser.parseTransactions(links.history, pages.transactionPartial,
-					function (error, url, trans) {
-						expect(error).to.be.null;
-						expect(url).to.equal(links.history);
-
-						expect(trans.length).to.equal(40);
-						expect(moment(trans[0].timestamp).utc().year()).to.equal(2014);
-						expect(moment(trans[1].timestamp).utc().month()).to.equal(11);
-						expect(moment(trans[2].timestamp).utc().date()).to.equal(3);
-						expect(moment(trans[3].timestamp).utc().hours()).to.equal(20);
-						expect(moment(trans[4].timestamp).utc().minutes()).to.equal(52);
-						expect(moment(trans[5].timestamp).utc().seconds()).to.equal(15);
-						expect(trans[6].description).to.equal(
-							'Transfer to xx1060 CommBank app');
-						expect(trans[7].amount).to.equal(-600);
-						expect(trans[8].balance).to.equal(680.67);
-						expect(trans[9].trancode).to.equal('550085');
-						expect(trans[10].receiptnumber).to.equal('N112744391641');
-
-						done();
-					});
-			});
-		it('should raise error if it cannot parse the page', function (done) {
-			parser.parseTransactions(links.login, pages.login, function (error,
-				url, trans) {
-				expect(error).not.to.be.null;
-
-				done();
-			});
-		});
-	});
-
-	describe('- parseAccountKeys()', function () {
-		it('should parse account list with the key of form', function (done) {
-			parser.parseAccountKeys(links.history, pages.transactionList,
-				function (error, url, keys) {
-					expect(error).to.be.null;
-					expect(url).to.equal(links.history);
-
-					expect(keys.length).to.equal(4);
-					expect(keys[0].nickname).to.equal('Smart Access');
-					expect(keys[1].number).to.equal('06243852870642');
-					expect(keys[2].key).to.equal(
-						'286010006652,DDA,True,False,False,True,True,False,True,False'
-					);
-					expect(keys[3].key).to.equal(
-						'5218921743830977,MCD,True,True,True,False,True,False,True,False'
-					);
-
-					done();
-				});
-		});
-		it('should raise error if there is no account list options in the page',
-			function (done) {
-				parser.parseAccountKeys(links.login, pages.login, function (error, url,
-					keys) {
-					expect(error).not.to.be.null;
-					done();
-				});
-			});
-	});
-
-	describe('- parseTransactionPage()', function () {
-		it(
-			'should parse the transaction page and get form, transactions and keys',
-			function (done) {
-				parser.parseTransactionPage(links.history, pages.transactionList,
-					function (error, url, form, transactions, keys) {
-						expect(error).to.be.null;
-						expect(url).to.equal(links.history);
-
-						expect(Object.keys(form).length).to.equal(40);
-						expect(transactions.length).to.equal(59);
-						expect(keys.length).to.equal(4);
-
-						done();
-					});
-			});
-		it('should raise error if it\'s not transaction page.', function (done) {
-			parser.parseTransactionPage(links.login, pages.login,
-				function (error, url, form, transactions, keys) {
-					expect(error).not.to.be.null;
-
-					done();
-				});
-		});
-		it('should raise error if it\'s a page without form.', function (done) {
-			parser.parseTransactionPage(links.history, pages.transactionPartial,
-				function (error, url, form, transactions, keys) {
-					expect(error).not.to.be.null;
-
-					done();
-				});
-		});
-	});
+          return resp;
+        })).resolves.toBeDefined();
+    });
+    test('should raise error if it\'s not transaction page.', () => {
+      expect.assertions(1);
+      return expect(
+          parser.parseTransactionPage({ url: links.login, body: pages.login }))
+        .rejects.toBeDefined();
+    });
+    test('should raise error if it\'s a page without form.', () => {
+      expect.assertions(1);
+      return expect(
+          parser.parseTransactionPage({ url: links.history, body: pages.transactionPartial }))
+        .rejects.toBeDefined();
+    });
+  });
 });
