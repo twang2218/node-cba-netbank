@@ -5,6 +5,7 @@ const web = require('./web');
 const parser = require('./parser');
 const Set = require('collections/fast-set');
 const Url = require('url');
+const debug = require('debug')('node-cba-netbank');
 
 // Constant
 const LINK = {
@@ -62,6 +63,7 @@ function refreshBase(resp) {
   const newLink = Url.parse(resp.url);
 
   if (oldLink.host !== newLink.host) {
+    debug(`refreshBase(${oldLink.host} => ${newLink.host}`);
     oldLink.host = newLink.host;
     LINK.BASE = Url.format(oldLink);
   }
@@ -200,7 +202,7 @@ function getTransactionsByDate(form, account, from, to) {
           //  we retrieved so far as the toDate, so it might workaround this
           //  problem.
 
-          console.warn(error);
+          debug(error);
 
           //  find the earliest date as 'to' date.
           let timestamp = resp.transactions[0].timestamp;
@@ -223,8 +225,8 @@ function getTransactionsByDate(form, account, from, to) {
             .catch(() => {
               //  cannot call it again, but we got some transactions at least,
               //  so, just call it a success.
-              console.warn(error);
-              console.warn('WARN: failed to call self again to load more');
+              debug(error);
+              debug('WARN: failed to call self again to load more');
               return resp;
             });
         });

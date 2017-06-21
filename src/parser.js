@@ -73,11 +73,11 @@ function extractTransactionJsonArray(page) {
   const begin = page.indexOf('{"Transactions');
   let end = -1;
   if (begin === -1) {
-    // console.error('Cannot find beginning of the transactions.');
+    // debug('Cannot find beginning of the transactions.');
     return null;
   }
   //  find the transactions block
-  // console.log('  begin at ' + begin);
+  // debug('  begin at ' + begin);
   let embedded = 1;
   for (let i = begin + 1; i <= page.length; i += 1) {
     const c = page.charAt(i);
@@ -93,7 +93,7 @@ function extractTransactionJsonArray(page) {
     }
     if (embedded === 0) {
       end = i + 1;
-      // console.log('  end at ' + end);
+      // debug('  end at ' + end);
       break;
     }
   }
@@ -276,7 +276,7 @@ function parseAccountKeys(resp) {
     const $ = cheerio.load(resp.body);
     $('select').each((i, e) => {
       $(e).find('option').each((index, element) => {
-        // console.log(`{ ${index}: ${$(element).html()} }`);
+        // debug(`{ ${index}: ${$(element).html()} }`);
         const account = {};
 
         const titles = $(element).html().split('|', 2);

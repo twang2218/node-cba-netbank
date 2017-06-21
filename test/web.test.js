@@ -108,7 +108,7 @@ describe('web.js', () => {
   describe('- real world access', () => {
     beforeEach(() => nock.enableNetConnect());
     test('www.google.com', (done) => {
-      web.get('https://www.google.com')
+      web.get('https://www.google.com.au')
         .then((resp) => {
           expect(resp.body.indexOf('<title>Google</title>')).toBeGreaterThan(-1);
           done();

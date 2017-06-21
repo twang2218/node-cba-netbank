@@ -5,6 +5,7 @@ const nock = require('nock');
 const fs = require('fs');
 const path = require('path');
 const api = require('../src/api');
+const debug = require('debug')('node-cba-netbank');
 
 // jasmine.DEFAULT_TIMEOUT_INTERVAL = 600000;
 
@@ -80,7 +81,7 @@ describe('api.js', () => {
     // this.timeout(20000);
 
     beforeAll(() => {
-      /* eslint-disable global-require */
+      /* eslint-disable global-require,import/no-unresolved */
       //  Load test credential
       const auth = require('./auth');
       credential.username = auth.username;
@@ -99,11 +100,11 @@ describe('api.js', () => {
             return resp;
           }),
         ).resolves.toBeDefined();
-      });
+      }, 10000);
       it('should failed if credential is not working', () => {
         expect.assertions(1);
         return expect(api.login(credentialWrong)).rejects.toBeDefined();
-      });
+      }, 10000);
     });
 
     describe('- getTransactions()', () => {
@@ -127,7 +128,7 @@ describe('api.js', () => {
     });
   } else {
     // use nock to mock the website
-    console.log('Mocking website ...');
+    debug('Mocking website ...');
     describe('- login()', () => {
       beforeEach(() => {
         mockWebsite();

@@ -92,7 +92,7 @@ describe('parser.js', () => {
       return expect(parseForm(pages.transactionList)
         .then((resp) => {
           expect(resp.form.ctl00$ContentHeaderPlaceHolder$ddlAccount$field)
-            .toEqual('5218921743830977,MCD,True,True,True,False,True,False,True,False');
+            .toEqual('5218012345678901,MCD,True,True,True,False,True,False,True,False');
           expect(resp.form.ctl00$BodyPlaceHolder$ddlDateRange$field).toEqual('3');
           return resp;
         })).resolves.toBeDefined();
@@ -114,30 +114,30 @@ describe('parser.js', () => {
           expect(resp.accounts.length).toEqual(4);
 
           expect(resp.accounts[0].nickname).toEqual('Smart Access');
-          expect(resp.accounts[0].bsbNumber).toEqual('06 2338');
-          expect(resp.accounts[0].accountNumber).toEqual('5282 0634');
-          expect(resp.accounts[0].number).toEqual('06233852820634');
+          expect(resp.accounts[0].bsbNumber).toEqual('06 2001');
+          expect(resp.accounts[0].accountNumber).toEqual('1234 0001');
+          expect(resp.accounts[0].number).toEqual('06200112340001');
           expect(resp.accounts[0].balance).toEqual(23.45);
           expect(resp.accounts[0].availableFunds).toEqual(-23.45);
 
           expect(resp.accounts[1].nickname).toEqual('NetBank Saver');
-          expect(resp.accounts[1].bsbNumber).toEqual('06 2438');
-          expect(resp.accounts[1].accountNumber).toEqual('5287 0642');
-          expect(resp.accounts[1].number).toEqual('06243852870642');
+          expect(resp.accounts[1].bsbNumber).toEqual('06 2002');
+          expect(resp.accounts[1].accountNumber).toEqual('1234 0012');
+          expect(resp.accounts[1].number).toEqual('06200212340012');
           expect(resp.accounts[1].balance).toEqual(1234.50);
           expect(resp.accounts[1].availableFunds).toEqual(234.50);
 
           expect(resp.accounts[2].nickname).toEqual('GoalSaver');
-          expect(resp.accounts[2].bsbNumber).toEqual('06 2860');
-          expect(resp.accounts[2].accountNumber).toEqual('1000 6652');
-          expect(resp.accounts[2].number).toEqual('06286010006652');
+          expect(resp.accounts[2].bsbNumber).toEqual('06 2003');
+          expect(resp.accounts[2].accountNumber).toEqual('1000 0013');
+          expect(resp.accounts[2].number).toEqual('06200310000013');
           expect(resp.accounts[2].balance).toEqual(76543.00);
           expect(resp.accounts[2].availableFunds).toEqual(76043.00);
 
           expect(resp.accounts[3].nickname).toEqual('MasterCard Platinum');
           expect(resp.accounts[3].bsbNumber).toEqual('');
-          expect(resp.accounts[3].accountNumber).toEqual('5218 9217 4383 0977');
-          expect(resp.accounts[3].number).toEqual('5218921743830977');
+          expect(resp.accounts[3].accountNumber).toEqual('5218 0123 4567 8901');
+          expect(resp.accounts[3].number).toEqual('5218012345678901');
           expect(resp.accounts[3].balance).toEqual(-123.45);
           expect(resp.accounts[3].availableFunds).toEqual(12345.67);
 
@@ -211,7 +211,7 @@ describe('parser.js', () => {
       const t1 = json[0];
       expect(t1.Date.Sort[1]).toEqual('201412050743384149731');
       expect(t1.Date.Text).toEqual('05 Dec 2014');
-      expect(t1.Description.Text).toEqual('Transfer to xx1060 CommBank app');
+      expect(t1.Description.Text).toEqual('Transfer to xx0010 CommBank app');
       expect(t1.Amount.Text).toEqual('$30.00 DR');
       expect(t1.Balance.Text).toEqual('$25.68 CR');
       expect(t1.TranCode.Text).toEqual('550085');
@@ -256,7 +256,7 @@ describe('parser.js', () => {
       expect(date.seconds()).toEqual(41);
       expect(date.milliseconds()).toEqual(306);
 
-      expect(t.description).toEqual('Transfer to xx1060 CommBank app');
+      expect(t.description).toEqual('Transfer to xx0010 CommBank app');
       expect(t.amount).toEqual(-100);
       expect(t.balance).toEqual(20.67);
       expect(t.trancode).toEqual('550085');
@@ -324,7 +324,7 @@ describe('parser.js', () => {
           expect(moment(resp.transactions[3].timestamp).utc().hours()).toEqual(20);
           expect(moment(resp.transactions[4].timestamp).utc().minutes()).toEqual(52);
           expect(moment(resp.transactions[5].timestamp).utc().seconds()).toEqual(15);
-          expect(resp.transactions[6].description).toEqual('Transfer to xx1060 CommBank app');
+          expect(resp.transactions[6].description).toEqual('Transfer to xx0010 CommBank app');
           expect(resp.transactions[7].amount).toEqual(-600);
           expect(resp.transactions[8].balance).toEqual(680.67);
           expect(resp.transactions[9].trancode).toEqual('550085');
@@ -349,11 +349,11 @@ describe('parser.js', () => {
 
           expect(resp.accounts.length).toEqual(4);
           expect(resp.accounts[0].nickname).toEqual('Smart Access');
-          expect(resp.accounts[1].number).toEqual('06243852870642');
+          expect(resp.accounts[1].number).toEqual('06200212340012');
           expect(resp.accounts[2].key).toEqual(
-            '286010006652,DDA,True,False,False,True,True,False,True,False');
+            '200310000013,DDA,True,False,False,True,True,False,True,False');
           expect(resp.accounts[3].key).toEqual(
-            '5218921743830977,MCD,True,True,True,False,True,False,True,False');
+            '5218012345678901,MCD,True,True,True,False,True,False,True,False');
 
           return resp;
         })).resolves.toBeDefined();

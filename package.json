@@ -41,9 +41,10 @@
     "build": "babel src -d lib",
     "prepublish": "yarn build",
     "eslint": "eslint src test",
-    "test": "jest --coverage",
-    "test-coveralls": "jest --coverage && cat ./coverage/lcov.info | coveralls",
-    "clean": "rm -rf ./log ./coverage ./lib"
+    "test": "jest --coverage --verbose",
+    "test-debug": "DEBUG=node-cba-netbank jest --runInBand --coverage --verbose",
+    "test-coveralls": "DEBUG=node-cba-netbank jest --coverage && cat ./coverage/lcov.info | coveralls",
+    "clean": "rm -rf ./log/* ./coverage ./lib"
   },
   "repository": "twang2218/node-cba-netbank",
   "keywords": [
