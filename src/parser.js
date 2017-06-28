@@ -1,6 +1,6 @@
 // Dependencies
+const Promise = require('bluebird');
 const cheerio = require('cheerio');
-const string = require('string');
 const moment = require('moment');
 const debug = require('debug')('node-cba-netbank');
 
@@ -12,56 +12,51 @@ const rCRLF = /\r?\n/g;
 //  Add support for allow `disabled` and `button` input element in the serialized array.
 function serializeArray(element, options = { disabled: false, button: false }) {
   // Resolve all form elements from either forms or collections of form elements
-  return element.map((i, elem) => {
-    const $elem = cheerio(elem);
-    if (elem.name === 'form') {
-      return $elem.find(submittableSelector).toArray();
-    }
-    return $elem.filter(submittableSelector).toArray();
-  }).filter(
-    // Verify elements have a name (`attr.name`)
-    `[name!=""]${
-        // and are not disabled (`:disabled`) if `options.disabled === false`
-         options.disabled ? '' : ':not(:disabled)'
-        // and or
-         }:not(${
-        // and cannot be clicked (`[type=submit]`) if `options.button === true`
-         options.button ? '' : ':submit, :button, '
-        // are used in `x-www-form-urlencoded` (`[type=file]`)
-         }:image, :reset, :file)`
-    // and are either checked/don't have a checkable state
-    +
-    ':matches([checked], :not(:checkbox, :radio))',
-    // Convert each of the elements to its value(s)
-  ).map((i, elem) => {
-    const $elem = cheerio(elem);
-    const name = $elem.attr('name');
-    let value = $elem.val();
+  return element
+    .map((i, elem) => {
+      const $elem = cheerio(elem);
+      if (elem.name === 'form') {
+        return $elem.find(submittableSelector).toArray();
+      }
+      return $elem.filter(submittableSelector).toArray();
+    })
+    .filter(
+      // Verify elements have a name (`attr.name`)
+      // and are not disabled (`:disabled`) if `options.disabled === false`
+      // and cannot be clicked (`[type=submit]`) if `options.button === true`
+      // are used in 'x-www-form-urlencoded' ('[type=file]')
+      `[name!=""]${options.disabled ? '' : ':not(:disabled)'}:not(${options.button ? '' : ':submit, :button, '}:image, :reset, :file)` +
+        // and are either checked/don't have a checkable state
+        ':matches([checked], :not(:checkbox, :radio))',
+      // Convert each of the elements to its value(s)
+    )
+    .map((i, elem) => {
+      const $elem = cheerio(elem);
+      const name = $elem.attr('name');
+      let value = $elem.val();
 
-    // If there is no value set (e.g. `undefined`, `null`), then default value to empty
-    if (value == null) {
-      value = ($elem.attr('type') === 'checkbox') ? 'on' : '';
-    }
+      // If there is no value set (e.g. `undefined`, `null`), then default value to empty
+      if (value == null) {
+        value = $elem.attr('type') === 'checkbox' ? 'on' : '';
+      }
 
-    // If we have an array of values (e.g. `<select multiple>`),
-    // return an array of key/value pairs
-    if (Array.isArray(value)) {
-      return value.map(val =>
-        // We trim replace any line endings (e.g. `\r` or `\r\n` with `\r\n`)
-        // to guarantee consistency across platforms
-        //   These can occur inside of `<textarea>'s`
-        ({ name, value: val.replace(rCRLF, '\r\n') }));
-      // Otherwise (e.g. `<input type="text">`, return only one key/value pair
-    }
-    return { name, value: value.replace(rCRLF, '\r\n') };
+      // If we have an array of values (e.g. `<select multiple>`),
+      // return an array of key/value pairs
+      if (Array.isArray(value)) {
+        return value.map(val => ({ name, value: val.replace(rCRLF, '\r\n') })); //   These can occur inside of `<textarea>'s` // to guarantee consistency across platforms // We trim replace any line endings (e.g. `\r` or `\r\n` with `\r\n`)
+        // Otherwise (e.g. `<input type="text">`, return only one key/value pair
+      }
+      return { name, value: value.replace(rCRLF, '\r\n') };
 
-    // Convert our result to an array
-  }).get();
+      // Convert our result to an array
+    })
+    .get();
 }
 
 //  parse the balance to a double number.
+//  e.g. '$1,766.50 CR', '$123.00 DR'
 //  Positive is CR, and negative is DR.
-function parseCurrency(text) {
+function parseCurrencyText(text) {
   let amount = Number(text.replace(/[^0-9.]+/g, ''));
   if (text.indexOf('DR') > -1) {
     amount = -amount;
@@ -69,36 +64,20 @@ function parseCurrency(text) {
   return amount;
 }
 
-function extractTransactionJsonArray(page) {
-  const begin = page.indexOf('{"Transactions');
-  let end = -1;
-  if (begin === -1) {
-    // debug('Cannot find beginning of the transactions.');
-    return null;
+//  Parse:
+// <div class="FieldElement FieldElementLabel FieldElementNoLabel">
+//   <span class="CurrencySymbol CurrencyLabel PreFieldText">$</span>
+//   <span title="$" class="Currency field WithPostFieldText">1,767.44</span>
+//   <span class="PostFieldText">CR</span>
+// </div>
+//  to Number `1767.44`.
+function parseCurrencyHtml(elem) {
+  const e = cheerio.load(`<div>${elem}</div>`);
+  const currency = parseFloat(e('.Currency').text().replace(/,/g, '').trim());
+  if (e('.PostFieldText').text().trim() === 'DR') {
+    return -currency;
   }
-  //  find the transactions block
-  // debug('  begin at ' + begin);
-  let embedded = 1;
-  for (let i = begin + 1; i <= page.length; i += 1) {
-    const c = page.charAt(i);
-    switch (c) {
-      case '{':
-        embedded += 1;
-        break;
-      case '}':
-        embedded -= 1;
-        break;
-      default:
-        break;
-    }
-    if (embedded === 0) {
-      end = i + 1;
-      // debug('  end at ' + end);
-      break;
-    }
-  }
-
-  return JSON.parse(page.substring(begin, end)).Transactions;
+  return currency;
 }
 
 // Transaction format
@@ -111,34 +90,33 @@ function extractTransactionJsonArray(page) {
 //  trancode,
 //  receiptnumber
 // }
-function parseJsonToTransaction(json) {
+function parseTransaction(json) {
   try {
-    const transaction = {};
-
-    //  try parse the date from 'Sort.Text' first
+    //  try parse the date from 'Date.Sort[1]' first
     const dateTag = json.Date.Sort[1];
     let t = moment.utc(dateTag, 'YYYYMMDDHHmmssSSS');
     if (!t.isValid()) {
-      //  try parse the date from 'Date.Text' if previous failed
+      //  try parse the date from 'Date.Text' if previous attempt failed
       t = moment.utc(json.Date.Text, 'DD MMM YYYY');
       //  use sort order to distinguish different transactions.
-      if (!string(dateTag).isEmpty() && !isNaN(+dateTag)) {
+      if (dateTag && !isNaN(+dateTag)) {
         t.millisecond(+dateTag);
       }
     }
-    transaction.timestamp = t.valueOf();
 
-    transaction.date = t.toISOString();
-    transaction.description = json.Description.Text;
-    transaction.amount = parseCurrency(json.Amount.Text);
-    transaction.balance = parseCurrency(json.Balance.Text);
-    transaction.trancode = json.TranCode.Text;
-    transaction.receiptnumber = string(json.ReceiptNumber.Text).isEmpty() ? '' : json.ReceiptNumber.Text;
-
-    return transaction;
+    return {
+      timestamp: t.valueOf(),
+      date: t.toISOString(),
+      description: json.Description.Text || '',
+      amount: parseCurrencyText(json.Amount.Text),
+      balance: parseCurrencyText(json.Balance.Text),
+      trancode: json.TranCode.Text || '',
+      receiptnumber: json.ReceiptNumber.Text || '',
+    };
   } catch (err) {
-    debug(json);
+    //  ignore the error for the misformatted transaction, and return null.
     debug(err);
+    debug(`Cannot parse the given transaction: ${JSON.stringify(json)}`);
     return null;
   }
 }
@@ -150,14 +128,15 @@ function parseForm(resp) {
     const $ = cheerio.load(resp.body);
     const formElement = $('form');
     if (formElement.length === 0) {
-      reject('Cannot find form in the page');
+      return reject('Cannot find form in the page');
     }
 
     // serializeForm(formElement)
     const form = {};
-    serializeArray(formElement, { disabled: true, button: true })
-      .forEach((item) => { form[item.name] = item.value; });
-    resolve(Object.assign(resp, { form }));
+    serializeArray(formElement, { disabled: true, button: true }).forEach((item) => {
+      form[item.name] = item.value;
+    });
+    return resolve(Object.assign(resp, { form }));
   });
 }
 
@@ -167,75 +146,64 @@ function parseFormInPartialUpdate(resp) {
     const $ = cheerio.load(resp.body);
 
     const form = {};
-    serializeArray($, { disabled: true, button: true })
-      .forEach((item) => { form[item.name] = item.value; });
+    serializeArray($, { disabled: true, button: true }).forEach((item) => {
+      form[item.name] = item.value;
+    });
 
     if (form.length === 0) {
-      reject('Cannot find form element in partial update');
-    } else {
-      resolve(Object.assign(resp, { form }));
+      return reject('Cannot find form element in partial update');
     }
 
     //  get new view state of asp.net
     const REGEX_VIEW_STATE = /(__VIEWSTATE|__EVENTVALIDATION|__VIEWSTATEGENERATOR)\|([^|]+)\|/g;
-    const matches = resp.body.match(REGEX_VIEW_STATE);
-    if (matches) {
-      form[matches[1]] = matches[2];
+    let match = REGEX_VIEW_STATE.exec(resp.body);
+    while (match) {
+      form[match[1]] = match[2];
+      match = REGEX_VIEW_STATE.exec(resp.body);
     }
 
-    resolve(Object.assign(resp, { form }));
+    return resolve(Object.assign(resp, { form }));
   });
 }
 
 //  Account format:
 // {
-//  nickname,
-//  url,
-//  bsbNumber,
-//  accountNumber,
-//  number,
+//  name,
+//  link,
+//  bsb,
+//  account,
+//  number: {bsb+account}
 //  balance
 // }
 function parseAccountList(resp) {
   return new Promise((resolve, reject) => {
-    const accounts = [];
-
     const $ = cheerio.load(resp.body);
-    const accountRow = $('div#myPortfolioDiv').find('tr.main_group_account_row');
+    const accountRows = $('.main_group_account_row');
 
-    if (accountRow.length <= 0) {
-      reject('Cannot find account list.');
+    if (!accountRows || accountRows.length === 0) {
+      return reject('Cannot find account list.');
     }
 
-    accountRow.each((i, e) => {
-      const account = {};
-      const tag = $(e).find('td.NicknameField a');
-      account.nickname = tag.html();
-      account.url = tag.attr('href');
-      account.bsbNumber = $(e).find('td.BSBField span.text').html();
-      if (string(account.bsbNumber).isEmpty()) {
-        account.bsbNumber = '';
-      }
-      account.accountNumber = $(e).find('td.AccountNumberField span.text').html();
-      account.number = (account.bsbNumber + account.accountNumber).replace(/\s+/g, '');
-
-      account.balance = parseCurrency(
-        `${$(e).find('td.AccountBalanceField span.Currency').html()} ${
-          $(e).find('td.AccountBalanceField span.PostFieldText').html()}`,
-      );
-
-      account.availableFunds = parseCurrency(
-        `${$(e).find('td.AvailableFundsField span.Currency').html()} ${$(e).find(
-          'td.AvailableFundsField span.PostFieldText').html()}`,
-      );
-
-      //  validate the account info
-      if (!string(account.nickname).isEmpty() && !string(account.url).isEmpty() &&
-        !string(account.accountNumber).isEmpty()) {
-        accounts.push(account);
-      }
+    let accounts = [];
+    accountRows.each((index, elem) => {
+      const $$ = cheerio.load(elem);
+      accounts.push({
+        name: $$('.NicknameField .left a').text().trim(),
+        link: $$('.NicknameField .left a').attr('href'),
+        bsb: $$('.BSBField .text').text().replace(/\s+/g, '').trim(),
+        account: $$('.AccountNumberField .text').text().replace(/\s+/g, '').trim(),
+        balance: parseCurrencyHtml($$('.AccountBalanceField')),
+        available: parseCurrencyHtml($$('.AvailableFundsField')),
+      });
     });
-    resolve(Object.assign(resp, { accounts }));
+
+    accounts = accounts
+      //  Assemble the `bsb` and `account` to construct `number`
+      .map(acc => Object.assign({}, acc, { number: `${acc.bsb}${acc.account}` }))
+      //  validate the account info
+      .filter(acc => acc.name && acc.link && acc.account);
+
+    return resolve(Object.assign(resp, { accounts }));
   });
 }
 
@@ -245,50 +213,39 @@ function parseHomePage(resp) {
 
 function parseTransactions(resp) {
   return new Promise((resolve, reject) => {
-    const transactions = [];
-    const jsonArray = extractTransactionJsonArray(resp.body);
-    if (!jsonArray) {
-      reject('Cannot find transaction section.');
-    } else {
-      jsonArray.forEach((t) => {
-        const transaction = parseJsonToTransaction(t);
-        if (transaction !== null) {
-          transactions.push(transaction);
-        } else {
-          //  just ignore the misformed transactions;
-          debug(`Cannot parse a transaction: ${t.toString()}`);
-        }
-      });
-      resolve(Object.assign(resp, { transactions }));
+    const m = /Transactions":(\[.*),"OutstandingAuthorizations"/.exec(resp.body);
+    if (m) {
+      const transactions = JSON.parse(m[1]).map(parseTransaction).filter(v => !!v);
+      return resolve(Object.assign({}, resp, { transactions }));
     }
+    return reject('Cannot find transactions in the resp');
   });
 }
 
+//  Parse the account list from TransactionHistory/History.aspx page
 // AccountWithKeys
 // {
-//  nickname,
+//  name,
 //  number,
 //  key
 // }
-function parseAccountKeys(resp) {
+function parseAccountListWithKeys(resp) {
   return new Promise((resolve, reject) => {
-    const accounts = [];
     const $ = cheerio.load(resp.body);
-    $('select').each((i, e) => {
-      $(e).find('option').each((index, element) => {
-        // debug(`{ ${index}: ${$(element).html()} }`);
-        const account = {};
+    const accounts = [];
 
-        const titles = $(element).html().split('|', 2);
-        if (titles.length > 1) {
-          account.nickname = titles[0].trim();
-          account.number = titles[1].replace(/\s+/g, '');
+    $('#ctl00_ContentHeaderPlaceHolder_updatePanelAccount').find('option').each((i, e) => {
+      const texts = $(e).text().split('|').map(t => t.trim());
+      if (texts.length === 2) {
+        const acc = {
+          name: texts[0],
+          number: texts[1].replace(/\s+/g, ''),
+          key: $(e).attr('value'),
+        };
+        if (acc.key && acc.number && acc.name) {
+          accounts.push(acc);
         }
-        account.key = $(element).attr('value');
-        if (account.key.length > 0 && titles.length > 1) {
-          accounts.push(account);
-        }
-      });
+      }
     });
 
     if (accounts.length > 0) {
@@ -300,9 +257,7 @@ function parseAccountKeys(resp) {
 }
 
 function parseTransactionPage(resp) {
-  return parseForm(resp)
-    .then(parseTransactions)
-    .then(parseAccountKeys);
+  return parseForm(resp).then(parseTransactions).then(parseAccountListWithKeys);
 }
 
 module.exports = {
@@ -310,10 +265,10 @@ module.exports = {
   parseFormInPartialUpdate,
   parseAccountList,
   parseHomePage,
-  parseCurrency,
-  extractTransactionJsonArray,
-  parseJsonToTransaction,
+  parseCurrencyText,
+  parseCurrencyHtml,
+  parseTransaction,
   parseTransactions,
-  parseAccountKeys,
+  parseAccountListWithKeys,
   parseTransactionPage,
 };

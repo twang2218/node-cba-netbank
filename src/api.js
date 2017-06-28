@@ -1,9 +1,7 @@
 // Dependencies
 const moment = require('moment');
-const string = require('string');
 const web = require('./web');
 const parser = require('./parser');
-const Set = require('collections/fast-set');
 const Url = require('url');
 const debug = require('debug')('node-cba-netbank');
 
@@ -20,36 +18,15 @@ function toDateString(timestamp) {
   return moment(timestamp).utc().format('DD/MM/YYYY');
 }
 
-//  Find whether those 2 transactions are exactly match.
-function equal(left, right) {
-  if (
-    //  case 1. Have same receipt number, of course, it's not empty
-    (!string(left.receiptnumber).isEmpty() &&
-      left.receiptnumber === right.receiptnumber) ||
-    //  case 2. Same time, same description and same amount
-    (left.timestamp === right.timestamp &&
-      left.description === right.description &&
-      left.amount === right.amount)
-  ) {
-    return true;
-  }
-  return false;
-}
+const isSameTransaction = (left, right) =>
+  //  case 1. Have same receipt number, of course, it's not empty
+  (left.receiptnumber && left.receiptnumber === right.receiptnumber) ||
+  //  case 2. Same time, same description and same amount
+  (left.timestamp === right.timestamp && left.description === right.description && left.amount === right.amount);
 
-function hash(transaction) {
-  return transaction.timestamp.toString();
-}
-
-//  Add more items to base set.
-function addAll(base, more) {
-  const set = new Set(base, equal, hash);
-
-  more.forEach((m) => {
-    if (!set.has(m)) {
-      base.push(m);
-      set.add(m);
-    }
-  });
+//  concat 2 transactionList without any duplications.
+function concat(a, b) {
+  return a.concat(b.filter(vb => !a.find(va => isSameTransaction(va, vb))));
 }
 
 //  Return `${LINK.BASE}+${path}`
@@ -88,9 +65,7 @@ function lazyLoading(form, account) {
       partial: true,
     })
     .then(parser.parseFormInPartialUpdate)
-    .then(resp =>
-      Object.assign({}, resp, { form: Object.assign({}, resp.form, form) }),
-    );
+    .then(resp => Object.assign({}, resp, { form: Object.assign({}, resp.form, form) }));
 }
 
 //  API
@@ -122,11 +97,12 @@ function login(credentials) {
 }
 
 function getMoreTransactions(form, account) {
+  debug(`getMoreTransactions(account: ${JSON.stringify(account)})`);
   const acc = Object.assign({}, account);
   // send the request
   return web
     .post({
-      url: getUrl(account.url),
+      url: getUrl(account.link),
       form: {
         // fill the form
         ctl00$ctl00: 'ctl00$BodyPlaceHolder$UpdatePanelForAjax|ctl00$BodyPlaceHolder$UpdatePanelForAjax',
@@ -138,6 +114,7 @@ function getMoreTransactions(form, account) {
     .then(parser.parseTransactions)
     .then(refreshBase)
     .then((resp) => {
+      debug(`after parser.parseTransactions(): resp.url => ${resp.url}`);
       acc.url = Url.parse(resp.url).path;
       if (resp.transactions.length === 0) {
         //  There is no more transactions
@@ -146,22 +123,22 @@ function getMoreTransactions(form, account) {
       //  Received some transactions, and there may be more.
       return getMoreTransactions(form, account).then((r) => {
         if (!resp.transactions || resp.transactions.length <= 0) {
-          throw new Error(
-            'getMoreTransactions() did not returned any transactions.',
-          );
+          throw new Error('getMoreTransactions() did not returned any transactions.');
         }
         //  add more transactions to previous batch.
-        addAll(resp.transactions, r.transactions);
-        return resp;
+        return Object.assign({}, resp, {
+          transactions: concat(resp.transactions, r.transactions),
+        });
       });
     });
 }
 
 function getTransactionsByDate(form, account, from, to) {
+  debug(`getTransactionsByDate(account: ${JSON.stringify(account)}, from: ${from}, to: ${to})`);
   const acc = Object.assign({}, account);
   return web
     .post({
-      url: getUrl(account.url),
+      url: getUrl(account.link),
       form: {
         // fill the form
         ctl00$ctl00: 'ctl00$BodyPlaceHolder$updatePanelSearch|ctl00$BodyPlaceHolder$lbSearch',
@@ -180,7 +157,7 @@ function getTransactionsByDate(form, account, from, to) {
     .then(parser.parseTransactions)
     .then(refreshBase)
     .then((resp) => {
-      acc.url = Url.parse(resp.url).path;
+      acc.link = Url.parse(resp.url).path;
       if (resp.transactions.length === 0) {
         //  there is no transactions
         return resp;
@@ -188,12 +165,13 @@ function getTransactionsByDate(form, account, from, to) {
       //  we got some transactions, there might be more of them.
       return getMoreTransactions(form, account)
         .then((r) => {
+          let transactions = resp.transactions;
           if (r.transactions.length > 0) {
             //  there are more transactions
             //  add more transactions to previous batch.
-            addAll(resp.transactions, r.transactions);
+            transactions = concat(resp.transactions, r.transactions);
           }
-          return resp;
+          return Object.assign({}, resp, { transactions });
         })
         .catch((error) => {
           //  an error happend during load more, it means that it may have more,
@@ -216,11 +194,12 @@ function getTransactionsByDate(form, account, from, to) {
           // Call self again
           return getTransactionsByDate(form, account, from, newTo)
             .then((r) => {
+              let transactions = resp.transactions;
               if (r.transactions.length > 0) {
                 //  add more transactions to previous batch;
-                addAll(resp.transactions, r.transactions);
+                transactions = concat(resp.transactions, r.transactions);
               }
-              return resp;
+              return Object.assign({}, resp, { transactions });
             })
             .catch(() => {
               //  cannot call it again, but we got some transactions at least,
@@ -234,37 +213,29 @@ function getTransactionsByDate(form, account, from, to) {
 }
 
 function getTransactions(account) {
+  debug(`getTransactions(account: ${JSON.stringify(account)})`);
   const acc = Object.assign({}, account);
   //  retrieve post form and key for the given account
-  return web
-    .get(getUrl(account.url))
-    .then(parser.parseTransactionPage)
-    .then(refreshBase)
-    .then((resp) => {
-      acc.url = Url.parse(resp.url).path;
-      if (resp.accounts !== null) {
-        // Attach the account key value for searching
-        acc.key = resp.accounts.filter(
-          value => value.number === account.number,
-        )[0].key;
-      }
+  return web.get(getUrl(account.link)).then(parser.parseTransactionPage).then(refreshBase).then((resp) => {
+    acc.link = Url.parse(resp.url).path;
+    if (resp.accounts !== null) {
+      acc.key = resp.accounts.find(a => a.number === account.number).key;
+    }
 
-      //  Download range from now to 5 years ago, as normally bank doesn't
-      //  keep transactions log for too long. FYI, tried 8 years without error
-      //  message in the first place, however, bank only stored 2 years transactions
-      //  data.
-      const from = toDateString(moment.utc().subtract(5, 'years').valueOf());
-      const to = toDateString(moment.utc().valueOf());
+    //  Download range from now to 5 years ago, as normally bank doesn't
+    //  keep transactions log for too long. FYI, tried 8 years without error
+    //  message in the first place, however, bank only stored 2 years transactions
+    //  data.
+    const from = toDateString(moment.utc().subtract(5, 'years').valueOf());
+    const to = toDateString(moment.utc().valueOf());
 
-      //  if the transaction section is lazy loading, we need do a panel update
-      //  first, before the real search.
-      if (!resp.form.ctl00$BodyPlaceHolder$radioSwitchSearchType$field$) {
-        return lazyLoading(resp.form, acc).then(r =>
-          getTransactionsByDate(r.form, acc, from, to),
-        );
-      }
-      return getTransactionsByDate(resp.form, acc, from, to);
-    });
+    //  if the transaction section is lazy loading, we need do a panel update
+    //  first, before the real search.
+    if (!resp.form.ctl00$BodyPlaceHolder$radioSwitchSearchType$field$) {
+      return lazyLoading(resp.form, acc).then(r => getTransactionsByDate(r.form, acc, from, to));
+    }
+    return getTransactionsByDate(resp.form, acc, from, to);
+  });
 }
 
 //  Exports

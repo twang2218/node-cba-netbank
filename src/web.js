@@ -14,8 +14,8 @@ const DEFAULT_OPTION = {
 };
 
 // Utilities
-const requestPromise = request.defaults(DEFAULT_OPTION);
-const isString = obj => (typeof obj === 'string' || obj instanceof String);
+const myRequest = request.defaults(DEFAULT_OPTION);
+const isString = obj => typeof obj === 'string' || obj instanceof String;
 
 function logToFile(filename, extension, content) {
   const name = `${filename}-${new Date().getTime()}${extension}`;
@@ -42,14 +42,13 @@ function req(params = {}) {
     }
   }
 
-  return requestPromise(myParams)
-    .then((response) => {
-      if (debug.enabled) {
-        logToFile('response', '.json', JSON.stringify(response.request, null, 2));
-        logToFile('body', '.html', response.body);
-      }
-      return { url: response.request.href, body: response.body };
-    });
+  return myRequest(myParams).then((response) => {
+    if (debug.enabled) {
+      logToFile('response', '.json', JSON.stringify(response.request, null, 2));
+      logToFile('body', '.html', response.body);
+    }
+    return { url: response.request.href, body: response.body };
+  });
 }
 
 //  Export

@@ -9,8 +9,7 @@ const debug = require('debug')('node-cba-netbank');
 
 // jasmine.DEFAULT_TIMEOUT_INTERVAL = 600000;
 
-const getFilePath = file =>
-  path.resolve(path.resolve(__dirname, 'test_cases'), file);
+const getFilePath = file => path.resolve(path.resolve(__dirname, 'test_cases'), file);
 
 const pages = {
   //  login page
@@ -46,10 +45,7 @@ function mockWebsite() {
       .replyWithFile(200, pages.login)
       //  Login page: submit login form with right credential
       .post('/netbank/Logon/Logon.aspx', (body) => {
-        if (
-          body.txtMyClientNumber$field === credential.username &&
-          body.txtMyPassword$field === credential.password
-        ) {
+        if (body.txtMyClientNumber$field === credential.username && body.txtMyPassword$field === credential.password) {
           isLoggedIn = true;
           return true;
         }
@@ -91,40 +87,62 @@ describe('api.js', () => {
     });
 
     describe('- login()', () => {
-      it('should be able to login with correct credential', () => {
-        expect.assertions(3);
-        return expect(
-          api.login(credential).then((resp) => {
-            expect(resp.accounts).toBeDefined();
-            expect(resp.accounts.length).toBeGreaterThan(1);
-            return resp;
-          }),
-        ).resolves.toBeDefined();
-      }, 10000);
-      it('should failed if credential is not working', () => {
-        expect.assertions(1);
-        return expect(api.login(credentialWrong)).rejects.toBeDefined();
-      }, 10000);
+      it(
+        'should be able to login with correct credential',
+        () => {
+          expect.assertions(3);
+          return expect(
+            api
+              .login(credential)
+              .then((resp) => {
+                expect(resp.accounts).toBeDefined();
+                expect(resp.accounts.length).toBeGreaterThan(1);
+                return resp;
+              })
+              .catch((err) => {
+                debug(err);
+                throw err;
+              }),
+          ).resolves.toBeDefined();
+        },
+        10000,
+      );
+      it(
+        'should failed if credential is not working',
+        () => {
+          expect.assertions(1);
+          return expect(api.login(credentialWrong)).rejects.toBeDefined();
+        },
+        10000,
+      );
     });
 
     describe('- getTransactions()', () => {
-      it('should retrieve transactions for given account', () => {
-        expect.assertions(5);
-        return expect(
-          api
-            .login(credential)
-            .then((resp) => {
-              expect(resp.accounts).toBeDefined();
-              expect(resp.accounts.length).toBeGreaterThan(0);
-              return api.getTransactions(resp.accounts[0]);
-            })
-            .then((resp) => {
-              expect(resp.transactions).toBeDefined();
-              expect(resp.transactions.length).toBeGreaterThan(400);
-              return resp;
-            }),
-        ).resolves.toBeDefined();
-      }, 120000);
+      it(
+        'should retrieve transactions for given account',
+        () => {
+          expect.assertions(5);
+          return expect(
+            api
+              .login(credential)
+              .then((resp) => {
+                expect(resp.accounts).toBeDefined();
+                expect(resp.accounts.length).toBeGreaterThan(0);
+                return api.getTransactions(resp.accounts[0]);
+              })
+              .then((resp) => {
+                expect(resp.transactions).toBeDefined();
+                expect(resp.transactions.length).toBeGreaterThan(400);
+                return resp;
+              })
+              .catch((err) => {
+                debug(err);
+                throw err;
+              }),
+          ).resolves.toBeDefined();
+        },
+        120000,
+      );
     });
   } else {
     // use nock to mock the website
@@ -142,11 +160,17 @@ describe('api.js', () => {
       it('should be able to login with correct credential', () => {
         expect.assertions(3);
         return expect(
-          api.login(credential).then((resp) => {
-            expect(resp.accounts).toBeDefined();
-            expect(resp.accounts.length).toBeGreaterThan(1);
-            return resp;
-          }),
+          api
+            .login(credential)
+            .then((resp) => {
+              expect(resp.accounts).toBeDefined();
+              expect(resp.accounts.length).toBeGreaterThan(1);
+              return resp;
+            })
+            .catch((err) => {
+              debug(err);
+              throw err;
+            }),
         ).resolves.toBeDefined();
       });
       it('should failed if credential is not working', () => {
@@ -178,8 +202,11 @@ describe('api.js', () => {
             .then((resp) => {
               expect(resp.transactions).toBeDefined();
               expect(resp.transactions.length).toEqual(99);
-
               return resp;
+            })
+            .catch((err) => {
+              debug(err);
+              throw err;
             }),
         ).resolves.toBeDefined();
       });
