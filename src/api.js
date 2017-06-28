@@ -97,7 +97,7 @@ function login(credentials) {
 }
 
 function getMoreTransactions(form, account) {
-  debug(`getMoreTransactions(account: ${JSON.stringify(account)})`);
+  debug(`getMoreTransactions(account: ${account.name} [${account.number}] => ${account.available})`);
   const acc = Object.assign({}, account);
   // send the request
   return web
@@ -134,7 +134,7 @@ function getMoreTransactions(form, account) {
 }
 
 function getTransactionsByDate(form, account, from, to) {
-  debug(`getTransactionsByDate(account: ${JSON.stringify(account)}, from: ${from}, to: ${to})`);
+  debug(`getTransactionsByDate(account: ${account.name} [${account.number}] => ${account.available}, from: ${from}, to: ${to})`);
   const acc = Object.assign({}, account);
   return web
     .post({
@@ -213,7 +213,7 @@ function getTransactionsByDate(form, account, from, to) {
 }
 
 function getTransactions(account) {
-  debug(`getTransactions(account: ${JSON.stringify(account)})`);
+  debug(`getTransactions(account: ${account.name} [${account.number}] => ${account.available})`);
   const acc = Object.assign({}, account);
   //  retrieve post form and key for the given account
   return web.get(getUrl(account.link)).then(parser.parseTransactionPage).then(refreshBase).then((resp) => {

@@ -36,7 +36,11 @@ function req(params = {}) {
   const myParams = Object.assign({ method: 'GET' }, params, { headers });
 
   if (debug.enabled) {
-    debug(JSON.stringify(myParams));
+    debug(`${myParams.method} ${myParams.url.substring(0, 80)}...`);
+    debug(`headers => ${JSON.stringify(myParams.headers)}`);
+    if (myParams.method === 'POST') {
+      debug(`form => ${JSON.stringify(myParams.form)}`);
+    }
     if (myParams.form) {
       logToFile('form', '.json', JSON.stringify(myParams.form, null, 2));
     }
