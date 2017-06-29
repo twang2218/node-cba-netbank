@@ -4,8 +4,10 @@
 const parser = require('../src/parser');
 const fs = require('fs');
 const path = require('path');
-const moment = require('moment');
+const moment = require('moment-timezone');
 const debug = require('debug')('node-cba-netbank');
+
+moment.tz.setDefault('Australia/Sydney');
 
 function load(filename) {
   return fs.readFileSync(path.resolve(path.resolve(__dirname, 'test_cases'), filename)).toString();
@@ -281,11 +283,11 @@ describe('parser.js', () => {
       const json = JSON.parse(pages.transactionJson1);
       const t = parser.parseTransaction(json);
       expect(t).not.toBeNull();
-      const date = moment(t.timestamp).utc();
+      const date = moment(t.timestamp);
       expect(date.year()).toEqual(2014);
-      expect(date.month()).toEqual(10);
-      expect(date.date()).toEqual(30);
-      expect(date.hours()).toEqual(20);
+      expect(date.month()).toEqual(11); //  month is zero indexed
+      expect(date.date()).toEqual(1);
+      expect(date.hours()).toEqual(7);
       expect(date.minutes()).toEqual(26);
       expect(date.seconds()).toEqual(19);
       expect(date.milliseconds()).toEqual(488);
@@ -300,11 +302,11 @@ describe('parser.js', () => {
       const json = JSON.parse(pages.transactionJson2);
       const t = parser.parseTransaction(json);
       expect(t).not.toBeNull();
-      const date = moment(t.timestamp).utc();
+      const date = moment(t.timestamp);
       expect(date.year()).toEqual(2014);
       expect(date.month()).toEqual(10);
       expect(date.date()).toEqual(20);
-      expect(date.hours()).toEqual(8);
+      expect(date.hours()).toEqual(19);
       expect(date.minutes()).toEqual(16);
       expect(date.seconds()).toEqual(41);
       expect(date.milliseconds()).toEqual(306);
@@ -319,7 +321,7 @@ describe('parser.js', () => {
       const json = JSON.parse(pages.transactionJson3);
       const t = parser.parseTransaction(json);
       expect(t).not.toBeNull();
-      const date = moment(t.timestamp).utc();
+      const date = moment(t.timestamp);
       expect(date.year()).toEqual(2015);
       expect(date.month()).toEqual(3);
       expect(date.date()).toEqual(25);
@@ -355,12 +357,12 @@ describe('parser.js', () => {
             expect(resp.url).toEqual(links.history);
 
             expect(resp.transactions.length).toEqual(59);
-            expect(moment(resp.transactions[0].timestamp).utc().year()).toEqual(2015);
-            expect(moment(resp.transactions[1].timestamp).utc().month()).toEqual(3);
-            expect(moment(resp.transactions[2].timestamp).utc().date()).toEqual(25);
-            expect(moment(resp.transactions[3].timestamp).utc().hours()).toEqual(0);
-            expect(moment(resp.transactions[4].timestamp).utc().minutes()).toEqual(0);
-            expect(moment(resp.transactions[5].timestamp).utc().seconds()).toEqual(0);
+            expect(moment(resp.transactions[0].timestamp).year()).toEqual(2015);
+            expect(moment(resp.transactions[1].timestamp).month()).toEqual(3);
+            expect(moment(resp.transactions[2].timestamp).date()).toEqual(25);
+            expect(moment(resp.transactions[3].timestamp).hours()).toEqual(0);
+            expect(moment(resp.transactions[4].timestamp).minutes()).toEqual(0);
+            expect(moment(resp.transactions[5].timestamp).seconds()).toEqual(0);
             expect(resp.transactions[6].description).toEqual('INTEREST CHARGES');
             expect(resp.transactions[7].amount).toEqual(-5.5);
             expect(resp.transactions[8].balance).toEqual(0);
@@ -390,12 +392,12 @@ describe('parser.js', () => {
             expect(resp.title).not.toBeDefined();
 
             expect(resp.transactions.length).toEqual(40);
-            expect(moment(resp.transactions[0].timestamp).utc().year()).toEqual(2014);
-            expect(moment(resp.transactions[1].timestamp).utc().month()).toEqual(11);
-            expect(moment(resp.transactions[2].timestamp).utc().date()).toEqual(3);
-            expect(moment(resp.transactions[3].timestamp).utc().hours()).toEqual(20);
-            expect(moment(resp.transactions[4].timestamp).utc().minutes()).toEqual(52);
-            expect(moment(resp.transactions[5].timestamp).utc().seconds()).toEqual(15);
+            expect(moment(resp.transactions[0].timestamp).year()).toEqual(2014);
+            expect(moment(resp.transactions[1].timestamp).month()).toEqual(11);
+            expect(moment(resp.transactions[2].timestamp).date()).toEqual(3);
+            expect(moment(resp.transactions[3].timestamp).hours()).toEqual(7);
+            expect(moment(resp.transactions[4].timestamp).minutes()).toEqual(52);
+            expect(moment(resp.transactions[5].timestamp).seconds()).toEqual(15);
             expect(resp.transactions[6].description).toEqual('Transfer to xx0010 CommBank app');
             expect(resp.transactions[7].amount).toEqual(-600);
             expect(resp.transactions[8].balance).toEqual(680.67);

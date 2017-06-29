@@ -1,8 +1,10 @@
 // Dependencies
 const Promise = require('bluebird');
 const cheerio = require('cheerio');
-const moment = require('moment');
+const moment = require('moment-timezone');
 const debug = require('debug')('node-cba-netbank');
+
+moment.tz.setDefault('Australia/Sydney');
 
 const submittableSelector = 'input,select,textarea,keygen';
 const rCRLF = /\r?\n/g;
@@ -94,10 +96,10 @@ function parseTransaction(json) {
   try {
     //  try parse the date from 'Date.Sort[1]' first
     const dateTag = json.Date.Sort[1];
-    let t = moment.utc(dateTag, 'YYYYMMDDHHmmssSSS');
+    let t = moment.utc(dateTag, 'YYYYMMDDHHmmssSSS').tz('Australia/Sydney');
     if (!t.isValid()) {
       //  try parse the date from 'Date.Text' if previous attempt failed
-      t = moment.utc(json.Date.Text, 'DD MMM YYYY');
+      t = moment(json.Date.Text, 'DD MMM YYYY');
       //  use sort order to distinguish different transactions.
       if (dateTag && !isNaN(+dateTag)) {
         t.millisecond(+dateTag);
@@ -106,7 +108,7 @@ function parseTransaction(json) {
 
     return {
       timestamp: t.valueOf(),
-      date: t.toISOString(),
+      date: t.format(),
       description: json.Description.Text || '',
       amount: parseCurrencyText(json.Amount.Text),
       balance: parseCurrencyText(json.Balance.Text),

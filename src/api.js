@@ -1,11 +1,12 @@
 // Dependencies
-const moment = require('moment');
+const moment = require('moment-timezone');
 const web = require('./web');
 const parser = require('./parser');
 const Url = require('url');
 const debug = require('debug')('node-cba-netbank');
 
 // Constant
+moment.tz.setDefault('Australia/Sydney');
 const LINK = {
   BASE: 'https://www.my.commbank.com.au',
   LOGIN: '/netbank/Logon/Logon.aspx',
@@ -15,7 +16,7 @@ const LINK = {
 
 //  Utilities
 function toDateString(timestamp) {
-  return moment(timestamp).utc().format('DD/MM/YYYY');
+  return moment(timestamp).format('DD/MM/YYYY');
 }
 
 const isSameTransaction = (left, right) =>
@@ -229,8 +230,8 @@ function getTransactions(account) {
     //  keep transactions log for too long. FYI, tried 8 years without error
     //  message in the first place, however, bank only stored 2 years transactions
     //  data.
-    const from = toDateString(moment.utc().subtract(5, 'years').valueOf());
-    const to = toDateString(moment.utc().valueOf());
+    const from = toDateString(moment().subtract(2, 'years').valueOf());
+    const to = toDateString(moment().valueOf());
 
     //  if the transaction section is lazy loading, we need do a panel update
     //  first, before the real search.
