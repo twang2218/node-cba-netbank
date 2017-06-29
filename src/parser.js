@@ -224,24 +224,19 @@ function parseHomePage(resp) {
 function parseTransactions(resp) {
   return new Promise((resolve, reject) => {
     //  Get transactions
-    let m = /Transactions":(\[.*),"OutstandingAuthorizations"/.exec(resp.body);
+    const m = /({"Transactions":(?:[^;]+))\);/.exec(resp.body);
     let transactions;
     if (m) {
-      transactions = JSON.parse(m[1]).map(parseTransaction).filter(v => !!v);
+      const json = JSON.parse(m[1]);
+      const pendings = json.OutstandingAuthorizations.map(parseTransaction).filter(v => !!v);
+      debug(`parseTransactions(): found ${pendings.length} pending transactions`);
+      transactions = json.Transactions.map(parseTransaction).filter(v => !!v);
       debug(`parseTransactions(): found ${transactions.length} transactions`);
-      //  Get whether there is more transations to load.
-      m = /"More":(\w+),"Limit":(\w+),/.exec(resp.body);
-      let more = false;
-      let limit = false;
-      if (m) {
-        more = m[1] === 'true';
-        limit = m[2] === 'true';
-        debug(`parseTransactions(): There ${more ? 'are ' : 'is NO '}more transactions.`);
-        if (limit) {
-          debug('parseTransactions(): However, it reached the limit.');
-        }
+      debug(`parseTransactions(): There ${json.More ? 'are ' : 'is NO '}more transactions.`);
+      if (json.Limit) {
+        debug('parseTransactions(): However, it reaches the limit.');
       }
-      return resolve(Object.assign({}, resp, { transactions, more, limit }));
+      return resolve(Object.assign({}, resp, { transactions, more: json.More, limit: json.Limit, pendings }));
     }
     return reject('Cannot find transactions in the resp');
   });
