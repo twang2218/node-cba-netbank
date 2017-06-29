@@ -34,17 +34,20 @@ const links = {
   history: 'https://www.my.commbank.com.au/netbank/TransactionHistory/History.aspx',
 };
 
+const headersHtml = { 'content-type': 'text/html' };
+const headersJson = { 'content-type': 'text/json' };
+
 describe('parser.js', () => {
   describe('- parseForm()', () => {
     function parseForm(body = pages.transactionList) {
-      return parser.parseForm({ url: links.login, body }).then((resp) => {
+      return parser.parseForm({ url: links.login, headers: headersHtml, body }).then((resp) => {
         expect(resp.url).toEqual(links.login);
         return resp;
       });
     }
 
     test('should be able parse the properties', () => {
-      expect.assertions(10);
+      expect.assertions(11);
       return expect(
         parseForm(pages.login)
           .then((resp) => {
@@ -56,6 +59,7 @@ describe('parser.js', () => {
             expect(resp.form).toHaveProperty('txtMyClientNumber$field');
             expect(resp.form).toHaveProperty('txtMyPassword$field');
             expect(Object.keys(resp.form).length).toEqual(12);
+            expect(resp.title.indexOf('NetBank - Log on to NetBank') >= 0).toBeTruthy();
             return resp;
           })
           .catch((err) => {
@@ -81,12 +85,13 @@ describe('parser.js', () => {
       ).resolves.toBeDefined();
     });
     test('should parse <input type="radio" ...>', () => {
-      expect.assertions(4);
+      expect.assertions(5);
       return expect(
         parseForm(pages.transactionList)
           .then((resp) => {
             expect(resp.form.ctl00$BodyPlaceHolder$radioSwitchSearchType$field$).toEqual('AllTransactions');
             expect(resp.form.ctl00$BodyPlaceHolder$radioSwitchDateRange$field$).toEqual('TimePeriod');
+            expect(resp.title).toEqual('NetBank - Transactions');
             return resp;
           })
           .catch((err) => {
@@ -138,7 +143,7 @@ describe('parser.js', () => {
       expect.assertions(27);
       return expect(
         parser
-          .parseAccountList({ url: links.home, body: pages.homePage })
+          .parseAccountList({ url: links.home, headers: headersHtml, body: pages.homePage })
           .then((resp) => {
             expect(resp.url).toEqual(links.home);
 
@@ -183,18 +188,20 @@ describe('parser.js', () => {
 
     test('should raise error if there is no account list in the page', () => {
       expect.assertions(1);
-      return expect(parser.parseAccountList({ url: links.login, body: pages.login })).rejects.toBeDefined();
+      return expect(parser.parseAccountList({ url: links.login, headers: headersHtml, body: pages.login })).rejects.toBeDefined();
     });
   });
 
   describe('- parseHomePage()', () => {
     test('should parse the submit form and account list', () => {
-      expect.assertions(6);
+      expect.assertions(7);
       return expect(
         parser
-          .parseHomePage({ url: links.home, body: pages.homePage })
+          .parseHomePage({ url: links.home, headers: headersHtml, body: pages.homePage })
           .then((resp) => {
             expect(resp.url).toEqual(links.home);
+
+            expect(resp.title).toEqual('NetBank - Home');
 
             expect(resp.form).toHaveProperty('RID');
             expect(resp.form).toHaveProperty('SID');
@@ -211,13 +218,14 @@ describe('parser.js', () => {
     });
     test('should raise error if fail to parse the account list in the home page.', () => {
       expect.assertions(1);
-      return expect(parser.parseHomePage({ url: links.login, body: pages.login })).rejects.toBeDefined();
+      return expect(parser.parseHomePage({ url: links.login, headers: headersHtml, body: pages.login })).rejects.toBeDefined();
     });
     test('should raise error if fail to parse the page at all', () => {
       expect.assertions(1);
       return expect(
         parser.parseHomePage({
           url: links.login,
+          headers: headersJson,
           body: pages.transactionPartial,
         }),
       ).rejects.toBeDefined();
@@ -336,6 +344,7 @@ describe('parser.js', () => {
         parser
           .parseTransactions({
             url: links.history,
+            headers: headersHtml,
             body: pages.transactionList,
           })
           .then((resp) => {
@@ -363,15 +372,18 @@ describe('parser.js', () => {
       ).resolves.toBeDefined();
     });
     test('should parse a PARTIAL page to transction object array', () => {
-      expect.assertions(14);
+      expect.assertions(16);
       return expect(
         parser
           .parseTransactions({
             url: links.history,
+            headers: headersJson,
             body: pages.transactionPartial,
           })
           .then((resp) => {
             expect(resp.url).toEqual(links.history);
+
+            expect(resp.title).not.toBeDefined();
 
             expect(resp.transactions.length).toEqual(40);
             expect(moment(resp.transactions[0].timestamp).utc().year()).toEqual(2014);
@@ -385,6 +397,7 @@ describe('parser.js', () => {
             expect(resp.transactions[8].balance).toEqual(680.67);
             expect(resp.transactions[9].trancode).toEqual('550085');
             expect(resp.transactions[10].receiptnumber).toEqual('N112744391641');
+            expect(resp.more).toBeFalsy();
 
             return resp;
           })
@@ -407,6 +420,7 @@ describe('parser.js', () => {
         parser
           .parseAccountListWithKeys({
             url: links.history,
+            headers: headersHtml,
             body: pages.transactionList,
           })
           .then((resp) => {
@@ -434,11 +448,12 @@ describe('parser.js', () => {
 
   describe('- parseTransactionPage()', () => {
     test('should parse the transaction page and get form, transactions and keys', () => {
-      expect.assertions(5);
+      expect.assertions(6);
       return expect(
         parser
           .parseTransactionPage({
             url: links.history,
+            headers: headersHtml,
             body: pages.transactionList,
           })
           .then((resp) => {
@@ -446,6 +461,7 @@ describe('parser.js', () => {
 
             expect(Object.keys(resp.form).length).toEqual(40);
             expect(resp.transactions.length).toEqual(59);
+            expect(resp.more).toBeTruthy();
             expect(resp.accounts.length).toEqual(4);
 
             return resp;
@@ -465,6 +481,7 @@ describe('parser.js', () => {
       return expect(
         parser.parseTransactionPage({
           url: links.history,
+          headers: headersJson,
           body: pages.transactionPartial,
         }),
       ).rejects.toBeDefined();

@@ -126,6 +126,15 @@ function parseTransaction(json) {
 function parseForm(resp) {
   return new Promise((resolve, reject) => {
     const $ = cheerio.load(resp.body);
+
+    //  Parse Title
+    let title;
+    if (resp.headers['content-type'] === 'text/html') {
+      title = $('title').text().trim();
+      debug(`parseForm(): title => ${title}`);
+    }
+
+    //  Parse Form
     const formElement = $('form');
     if (formElement.length === 0) {
       return reject('Cannot find form in the page');
@@ -136,7 +145,7 @@ function parseForm(resp) {
     serializeArray(formElement, { disabled: true, button: true }).forEach((item) => {
       form[item.name] = item.value;
     });
-    return resolve(Object.assign(resp, { form }));
+    return resolve(Object.assign({}, resp, { form, title }));
   });
 }
 
@@ -162,7 +171,7 @@ function parseFormInPartialUpdate(resp) {
       match = REGEX_VIEW_STATE.exec(resp.body);
     }
 
-    return resolve(Object.assign(resp, { form }));
+    return resolve(Object.assign({}, resp, { form }));
   });
 }
 
@@ -203,7 +212,8 @@ function parseAccountList(resp) {
       //  validate the account info
       .filter(acc => acc.name && acc.link && acc.account);
 
-    return resolve(Object.assign(resp, { accounts }));
+    debug(`parseAccountList(): found ${accounts.length} accounts`);
+    return resolve(Object.assign({}, resp, { accounts }));
   });
 }
 
@@ -213,10 +223,20 @@ function parseHomePage(resp) {
 
 function parseTransactions(resp) {
   return new Promise((resolve, reject) => {
-    const m = /Transactions":(\[.*),"OutstandingAuthorizations"/.exec(resp.body);
+    //  Get transactions
+    let m = /Transactions":(\[.*),"OutstandingAuthorizations"/.exec(resp.body);
+    let transactions;
     if (m) {
-      const transactions = JSON.parse(m[1]).map(parseTransaction).filter(v => !!v);
-      return resolve(Object.assign({}, resp, { transactions }));
+      transactions = JSON.parse(m[1]).map(parseTransaction).filter(v => !!v);
+      debug(`parseTransactions(): found ${transactions.length} transactions`);
+      //  Get whether there is more transations to load.
+      m = /"More":(\w+),/.exec(resp.body);
+      let more = false;
+      if (m) {
+        more = m[1] === 'true';
+        debug(`parseTransactions(): There is ${more ? '' : 'NO '}more transactions.`);
+      }
+      return resolve(Object.assign({}, resp, { transactions, more }));
     }
     return reject('Cannot find transactions in the resp');
   });
@@ -249,12 +269,13 @@ function parseAccountListWithKeys(resp) {
     });
 
     if (accounts.length > 0) {
-      resolve(Object.assign(resp, { accounts }));
+      resolve(Object.assign({}, resp, { accounts }));
     } else {
       reject('Cannot find accounts keys');
     }
   });
 }
+
 
 function parseTransactionPage(resp) {
   return parseForm(resp).then(parseTransactions).then(parseAccountListWithKeys);

@@ -52,20 +52,20 @@ function refreshBase(resp) {
 //  fail. To workaround such problem, we send an update panel partial callback
 //  first,let server side prepared the search panel and download transaction.
 //  Then, do the real search using the information from the parital callback result.
-function lazyLoading(form, account) {
+function lazyLoading(response, account) {
   return web
     .post({
       url: getUrl(account.url),
-      form: {
+      form: Object.assign({}, response.form, {
         //  Send partial request
         ctl00$ctl00: 'ctl00$BodyPlaceHolder$UpdatePanelForAjax|ctl00$BodyPlaceHolder$UpdatePanelForAjaxh',
         __EVENTTARGET: 'ctl00$BodyPlaceHolder$UpdatePanelForAjax',
         __EVENTARGUMENT: 'doPostBackApiCall|LoadRecentTransactions|false',
-      },
+      }),
       partial: true,
     })
     .then(parser.parseFormInPartialUpdate)
-    .then(resp => Object.assign({}, resp, { form: Object.assign({}, resp.form, form) }));
+    .then(resp => Object.assign({}, resp, { form: Object.assign({}, response.form, resp.form) }));
 }
 
 //  API
@@ -81,7 +81,7 @@ function login(credentials) {
         //  fill the login form and submit
         web.post({
           url: getUrl(LINK.LOGIN),
-          form: Object.assign(resp.form, {
+          form: Object.assign({}, resp.form, {
             txtMyClientNumber$field: credentials.username,
             txtMyPassword$field: credentials.password,
             chkRemember$field: 'on',
@@ -96,19 +96,19 @@ function login(credentials) {
   );
 }
 
-function getMoreTransactions(form, account) {
+function getMoreTransactions(response, account) {
   debug(`getMoreTransactions(account: ${account.name} [${account.number}] => ${account.available})`);
   const acc = Object.assign({}, account);
   // send the request
   return web
     .post({
       url: getUrl(account.link),
-      form: {
+      form: Object.assign({}, response.form, {
         // fill the form
         ctl00$ctl00: 'ctl00$BodyPlaceHolder$UpdatePanelForAjax|ctl00$BodyPlaceHolder$UpdatePanelForAjax',
         __EVENTTARGET: 'ctl00$BodyPlaceHolder$UpdatePanelForAjax',
         __EVENTARGUMENT: 'doPostBackApiCall|LoadTransactions|{"ClearCache":"false","IsSorted":false,"IsAdvancedSearch":true,"IsMonthSearch":false}',
-      },
+      }),
       partial: true,
     })
     .then(parser.parseTransactions)
@@ -121,7 +121,7 @@ function getMoreTransactions(form, account) {
         return resp;
       }
       //  Received some transactions, and there may be more.
-      return getMoreTransactions(form, account).then((r) => {
+      return getMoreTransactions(resp, account).then((r) => {
         if (!resp.transactions || resp.transactions.length <= 0) {
           throw new Error('getMoreTransactions() did not returned any transactions.');
         }
@@ -133,13 +133,13 @@ function getMoreTransactions(form, account) {
     });
 }
 
-function getTransactionsByDate(form, account, from, to) {
+function getTransactionsByDate(response, account, from, to) {
   debug(`getTransactionsByDate(account: ${account.name} [${account.number}] => ${account.available}, from: ${from}, to: ${to})`);
   const acc = Object.assign({}, account);
   return web
     .post({
       url: getUrl(account.link),
-      form: {
+      form: Object.assign({}, response.form, {
         // fill the form
         ctl00$ctl00: 'ctl00$BodyPlaceHolder$updatePanelSearch|ctl00$BodyPlaceHolder$lbSearch',
         __EVENTTARGET: 'ctl00$BodyPlaceHolder$lbSearch',
@@ -151,7 +151,7 @@ function getTransactionsByDate(form, account, from, to) {
         ctl00$BodyPlaceHolder$toCalTxtBox$field: to,
         //  Add this for partial update
         ctl00$BodyPlaceHolder$radioSwitchSearchType$field$: 'AllTransactions',
-      },
+      }),
       partial: true,
     })
     .then(parser.parseTransactions)
@@ -163,7 +163,7 @@ function getTransactionsByDate(form, account, from, to) {
         return resp;
       }
       //  we got some transactions, there might be more of them.
-      return getMoreTransactions(form, account)
+      return getMoreTransactions(resp, account)
         .then((r) => {
           let transactions = resp.transactions;
           if (r.transactions.length > 0) {
@@ -192,7 +192,7 @@ function getTransactionsByDate(form, account, from, to) {
           const newTo = toDateString(timestamp);
 
           // Call self again
-          return getTransactionsByDate(form, account, from, newTo)
+          return getTransactionsByDate(resp, account, from, newTo)
             .then((r) => {
               let transactions = resp.transactions;
               if (r.transactions.length > 0) {
@@ -232,9 +232,9 @@ function getTransactions(account) {
     //  if the transaction section is lazy loading, we need do a panel update
     //  first, before the real search.
     if (!resp.form.ctl00$BodyPlaceHolder$radioSwitchSearchType$field$) {
-      return lazyLoading(resp.form, acc).then(r => getTransactionsByDate(r.form, acc, from, to));
+      return lazyLoading(resp, acc).then(r => getTransactionsByDate(r, acc, from, to));
     }
-    return getTransactionsByDate(resp.form, acc, from, to);
+    return getTransactionsByDate(resp, acc, from, to);
   });
 }
 

@@ -17,17 +17,30 @@ const DEFAULT_OPTION = {
 const myRequest = request.defaults(DEFAULT_OPTION);
 const isString = obj => typeof obj === 'string' || obj instanceof String;
 
-function logToFile(filename, extension, content) {
-  const name = `${filename}-${new Date().getTime()}${extension}`;
-  fs.writeFile(`log/${name}`, content, (err) => {
+function writeToFile(filename, content) {
+  fs.writeFile(`log/${filename}`, content, (err) => {
     if (err) {
       debug(err);
     }
-    debug(`Wrote file 'log/${name}'.`);
+    debug(`Wrote to file => 'log/${filename}'.`);
   });
 }
 
+function shorten(form) {
+  const MAX_LEN = 200;
+  const shortenForm = {};
+  Object.entries(form).forEach((entry) => {
+    if (entry[1].length > MAX_LEN) {
+      shortenForm[entry[0]] = `${entry[1].substring(0, MAX_LEN)}... (${entry[1].length - MAX_LEN} bytes more)`;
+    } else {
+      shortenForm[entry[0]] = entry[1];
+    }
+  });
+  return shortenForm;
+}
+
 function req(params = {}) {
+  const sequence = Date.now();
   const { partial } = params;
   const headers = Object.assign({}, params.headers);
   if (partial) {
@@ -37,21 +50,27 @@ function req(params = {}) {
 
   if (debug.enabled) {
     debug(`${myParams.method} ${myParams.url.substring(0, 80)}...`);
-    debug(`headers => ${JSON.stringify(myParams.headers)}`);
+    debug(`headers => ${JSON.stringify(shorten(myParams.headers))}`);
     if (myParams.method === 'POST') {
-      debug(`form => ${JSON.stringify(myParams.form)}`);
+      debug(`form => ${JSON.stringify(shorten(myParams.form))}`);
     }
-    if (myParams.form) {
-      logToFile('form', '.json', JSON.stringify(myParams.form, null, 2));
-    }
+    writeToFile(`${sequence}-1-request.json`, JSON.stringify(shorten(myParams), null, 2));
   }
 
   return myRequest(myParams).then((response) => {
     if (debug.enabled) {
-      logToFile('response', '.json', JSON.stringify(response.request, null, 2));
-      logToFile('body', '.html', response.body);
+      writeToFile(`${sequence}-2-response.json`, JSON.stringify({
+        request: response.request,
+        status: {
+          code: response.statusCode,
+          message: response.statusMessage,
+        },
+        headers: response.headers,
+        body: `${response.body.substring(0, 1000)}...`,
+      }, null, 2));
+      writeToFile(`${sequence}-3-response-body.html`, response.body);
     }
-    return { url: response.request.href, body: response.body };
+    return { url: response.request.href, headers: response.headers, body: response.body };
   });
 }
 
