@@ -230,13 +230,18 @@ function parseTransactions(resp) {
       transactions = JSON.parse(m[1]).map(parseTransaction).filter(v => !!v);
       debug(`parseTransactions(): found ${transactions.length} transactions`);
       //  Get whether there is more transations to load.
-      m = /"More":(\w+),/.exec(resp.body);
+      m = /"More":(\w+),"Limit":(\w+),/.exec(resp.body);
       let more = false;
+      let limit = false;
       if (m) {
         more = m[1] === 'true';
-        debug(`parseTransactions(): There is ${more ? '' : 'NO '}more transactions.`);
+        limit = m[2] === 'true';
+        debug(`parseTransactions(): There ${more ? 'are ' : 'is NO '}more transactions.`);
+        if (limit) {
+          debug('parseTransactions(): However, it reached the limit.');
+        }
       }
-      return resolve(Object.assign({}, resp, { transactions, more }));
+      return resolve(Object.assign({}, resp, { transactions, more, limit }));
     }
     return reject('Cannot find transactions in the resp');
   });
@@ -275,7 +280,6 @@ function parseAccountListWithKeys(resp) {
     }
   });
 }
-
 
 function parseTransactionPage(resp) {
   return parseForm(resp).then(parseTransactions).then(parseAccountListWithKeys);

@@ -53,9 +53,10 @@ function refreshBase(resp) {
 //  first,let server side prepared the search panel and download transaction.
 //  Then, do the real search using the information from the parital callback result.
 function lazyLoading(response, account) {
+  debug(`lazyLoading(account: ${account.name} [${account.number}] => ${account.available}))`);
   return web
     .post({
-      url: getUrl(account.url),
+      url: getUrl(account.link),
       form: Object.assign({}, response.form, {
         //  Send partial request
         ctl00$ctl00: 'ctl00$BodyPlaceHolder$UpdatePanelForAjax|ctl00$BodyPlaceHolder$UpdatePanelForAjaxh',
@@ -99,116 +100,118 @@ function login(credentials) {
 function getMoreTransactions(response, account) {
   debug(`getMoreTransactions(account: ${account.name} [${account.number}] => ${account.available})`);
   const acc = Object.assign({}, account);
+  const responseWithForm = Object.assign({}, response, {
+    form: Object.assign({}, response.form, {
+      // fill the form
+      ctl00$ctl00: 'ctl00$BodyPlaceHolder$UpdatePanelForAjax|ctl00$BodyPlaceHolder$UpdatePanelForAjax',
+      __EVENTTARGET: 'ctl00$BodyPlaceHolder$UpdatePanelForAjax',
+      __EVENTARGUMENT: 'doPostBackApiCall|LoadTransactions|{"ClearCache":"false","IsSorted":false,"IsAdvancedSearch":true,"IsMonthSearch":false}',
+    }),
+  });
   // send the request
   return web
     .post({
       url: getUrl(account.link),
-      form: Object.assign({}, response.form, {
-        // fill the form
-        ctl00$ctl00: 'ctl00$BodyPlaceHolder$UpdatePanelForAjax|ctl00$BodyPlaceHolder$UpdatePanelForAjax',
-        __EVENTTARGET: 'ctl00$BodyPlaceHolder$UpdatePanelForAjax',
-        __EVENTARGUMENT: 'doPostBackApiCall|LoadTransactions|{"ClearCache":"false","IsSorted":false,"IsAdvancedSearch":true,"IsMonthSearch":false}',
-      }),
-      partial: true,
-    })
-    .then(parser.parseTransactions)
-    .then(refreshBase)
-    .then((resp) => {
-      debug(`after parser.parseTransactions(): resp.url => ${resp.url}`);
-      acc.url = Url.parse(resp.url).path;
-      if (resp.transactions.length === 0) {
-        //  There is no more transactions
-        return resp;
-      }
-      //  Received some transactions, and there may be more.
-      return getMoreTransactions(resp, account).then((r) => {
-        if (!resp.transactions || resp.transactions.length <= 0) {
-          throw new Error('getMoreTransactions() did not returned any transactions.');
-        }
-        //  add more transactions to previous batch.
-        return Object.assign({}, resp, {
-          transactions: concat(resp.transactions, r.transactions),
-        });
-      });
-    });
-}
-
-function getTransactionsByDate(response, account, from, to) {
-  debug(`getTransactionsByDate(account: ${account.name} [${account.number}] => ${account.available}, from: ${from}, to: ${to})`);
-  const acc = Object.assign({}, account);
-  return web
-    .post({
-      url: getUrl(account.link),
-      form: Object.assign({}, response.form, {
-        // fill the form
-        ctl00$ctl00: 'ctl00$BodyPlaceHolder$updatePanelSearch|ctl00$BodyPlaceHolder$lbSearch',
-        __EVENTTARGET: 'ctl00$BodyPlaceHolder$lbSearch',
-        __EVENTARGUMENT: '',
-        ctl00$BodyPlaceHolder$searchTypeField: '1',
-        ctl00$BodyPlaceHolder$radioSwitchDateRange$field$: 'ChooseDates',
-        ctl00$BodyPlaceHolder$dateRangeField: 'ChooseDates',
-        ctl00$BodyPlaceHolder$fromCalTxtBox$field: from,
-        ctl00$BodyPlaceHolder$toCalTxtBox$field: to,
-        //  Add this for partial update
-        ctl00$BodyPlaceHolder$radioSwitchSearchType$field$: 'AllTransactions',
-      }),
+      form: responseWithForm.form,
       partial: true,
     })
     .then(parser.parseTransactions)
     .then(refreshBase)
     .then((resp) => {
       acc.link = Url.parse(resp.url).path;
-      if (resp.transactions.length === 0) {
-        //  there is no transactions
+      if (!resp.more || resp.limit) {
+        //  There is no more transactions or reached the limit.
+        return resp;
+      }
+      return (
+        getMoreTransactions(responseWithForm, account)
+          //  concat more transactions.
+          .then(r => Object.assign({}, responseWithForm, { transactions: concat(resp.transactions, r.transactions) }))
+          //  Ignore the error as we have got some transactions already
+          .catch((error) => {
+            debug(error);
+            return resp;
+          })
+      );
+    });
+}
+
+function getTransactionsByDate(response, account, from, to) {
+  debug(
+    `getTransactionsByDate(account: ${account.name} [${account.number}] => ${account.available}, from: ${from}, to: ${to})`,
+  );
+  const acc = Object.assign({}, account);
+  const responseWithForm = Object.assign({}, response, {
+    form: Object.assign({}, response.form, {
+      // fill the form
+      ctl00$ctl00: 'ctl00$BodyPlaceHolder$updatePanelSearch|ctl00$BodyPlaceHolder$lbSearch',
+      __EVENTTARGET: 'ctl00$BodyPlaceHolder$lbSearch',
+      __EVENTARGUMENT: '',
+      ctl00$BodyPlaceHolder$searchTypeField: '1',
+      ctl00$BodyPlaceHolder$radioSwitchDateRange$field$: 'ChooseDates',
+      ctl00$BodyPlaceHolder$dateRangeField: 'ChooseDates',
+      ctl00$BodyPlaceHolder$fromCalTxtBox$field: from,
+      ctl00$BodyPlaceHolder$toCalTxtBox$field: to,
+      //  Add this for partial update
+      ctl00$BodyPlaceHolder$radioSwitchSearchType$field$: 'AllTransactions',
+    }),
+  });
+
+  return web
+    .post({
+      url: getUrl(account.link),
+      form: responseWithForm.form,
+      partial: true,
+    })
+    .then(parser.parseTransactions)
+    .then(refreshBase)
+    .then((resp) => {
+      acc.link = Url.parse(resp.url).path;
+      if (!resp.more || resp.limit) {
+        //  there is no more transactions or reached the limit.
         return resp;
       }
       //  we got some transactions, there might be more of them.
-      return getMoreTransactions(resp, account)
-        .then((r) => {
-          let transactions = resp.transactions;
-          if (r.transactions.length > 0) {
-            //  there are more transactions
-            //  add more transactions to previous batch.
-            transactions = concat(resp.transactions, r.transactions);
-          }
-          return Object.assign({}, resp, { transactions });
-        })
-        .catch((error) => {
-          //  an error happend during load more, it means that it may have more,
-          //  however, some restriction made it stopped, so we call it again,
-          //  but this time, we use the eariliest date from the transactions
-          //  we retrieved so far as the toDate, so it might workaround this
-          //  problem.
+      return (
+        getMoreTransactions(responseWithForm, account)
+          //  concat more transactions.
+          .then(r => Object.assign({}, responseWithForm, { transactions: concat(resp.transactions, r.transactions) }))
+          .catch((error) => {
+            //  an error happend during load more, it means that it may have more,
+            //  however, some restriction made it stopped, so we call it again,
+            //  but this time, we use the eariliest date from the transactions
+            //  we retrieved so far as the toDate, so it might workaround this
+            //  problem.
 
-          debug(error);
+            debug(error);
 
-          //  find the earliest date as 'to' date.
-          let timestamp = resp.transactions[0].timestamp;
-          resp.transactions.forEach((t) => {
-            if (timestamp > t.timestamp) {
-              timestamp = t.timestamp;
-            }
-          });
-          const newTo = toDateString(timestamp);
-
-          // Call self again
-          return getTransactionsByDate(resp, account, from, newTo)
-            .then((r) => {
-              let transactions = resp.transactions;
-              if (r.transactions.length > 0) {
-                //  add more transactions to previous batch;
-                transactions = concat(resp.transactions, r.transactions);
+            //  find the earliest date as 'to' date.
+            let timestamp = resp.transactions[0].timestamp;
+            resp.transactions.forEach((t) => {
+              if (timestamp > t.timestamp) {
+                timestamp = t.timestamp;
               }
-              return Object.assign({}, resp, { transactions });
-            })
-            .catch(() => {
-              //  cannot call it again, but we got some transactions at least,
-              //  so, just call it a success.
-              debug(error);
-              debug('WARN: failed to call self again to load more');
-              return resp;
             });
-        });
+            const newTo = toDateString(timestamp);
+
+            // Call self again
+            debug('getTransactionsByDate(): Got error during loading, so call self again to give it another try');
+            return (
+              getTransactionsByDate(responseWithForm, account, from, newTo)
+                //  concat more transactions
+                .then(r =>
+                  Object.assign({}, responseWithForm, { transactions: concat(resp.transactions, r.transactions) }),
+                )
+                .catch(() => {
+                  //  cannot call it again, but we got some transactions at least,
+                  //  so, just call it a success.
+                  debug(error);
+                  debug('getTransactionsByDate(): failed to call self again to load more');
+                  return Object.assign({}, responseWithForm, { transactions: resp.transactions });
+                })
+            );
+          })
+      );
     });
 }
 
@@ -234,7 +237,10 @@ function getTransactions(account) {
     if (!resp.form.ctl00$BodyPlaceHolder$radioSwitchSearchType$field$) {
       return lazyLoading(resp, acc).then(r => getTransactionsByDate(r, acc, from, to));
     }
-    return getTransactionsByDate(resp, acc, from, to);
+    return getTransactionsByDate(resp, acc, from, to).then((r) => {
+      debug(`getTransactions(): Total received ${r.transactions.length} transactions.`);
+      return r;
+    });
   });
 }
 

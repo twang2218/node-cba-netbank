@@ -188,7 +188,9 @@ describe('parser.js', () => {
 
     test('should raise error if there is no account list in the page', () => {
       expect.assertions(1);
-      return expect(parser.parseAccountList({ url: links.login, headers: headersHtml, body: pages.login })).rejects.toBeDefined();
+      return expect(
+        parser.parseAccountList({ url: links.login, headers: headersHtml, body: pages.login }),
+      ).rejects.toBeDefined();
     });
   });
 
@@ -218,7 +220,9 @@ describe('parser.js', () => {
     });
     test('should raise error if fail to parse the account list in the home page.', () => {
       expect.assertions(1);
-      return expect(parser.parseHomePage({ url: links.login, headers: headersHtml, body: pages.login })).rejects.toBeDefined();
+      return expect(
+        parser.parseHomePage({ url: links.login, headers: headersHtml, body: pages.login }),
+      ).rejects.toBeDefined();
     });
     test('should raise error if fail to parse the page at all', () => {
       expect.assertions(1);
@@ -372,7 +376,7 @@ describe('parser.js', () => {
       ).resolves.toBeDefined();
     });
     test('should parse a PARTIAL page to transction object array', () => {
-      expect.assertions(16);
+      expect.assertions(17);
       return expect(
         parser
           .parseTransactions({
@@ -398,6 +402,7 @@ describe('parser.js', () => {
             expect(resp.transactions[9].trancode).toEqual('550085');
             expect(resp.transactions[10].receiptnumber).toEqual('N112744391641');
             expect(resp.more).toBeFalsy();
+            expect(resp.limit).toBeFalsy();
 
             return resp;
           })
@@ -448,7 +453,7 @@ describe('parser.js', () => {
 
   describe('- parseTransactionPage()', () => {
     test('should parse the transaction page and get form, transactions and keys', () => {
-      expect.assertions(6);
+      expect.assertions(7);
       return expect(
         parser
           .parseTransactionPage({
@@ -462,6 +467,7 @@ describe('parser.js', () => {
             expect(Object.keys(resp.form).length).toEqual(40);
             expect(resp.transactions.length).toEqual(59);
             expect(resp.more).toBeTruthy();
+            expect(resp.limit).toBeFalsy();
             expect(resp.accounts.length).toEqual(4);
 
             return resp;

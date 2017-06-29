@@ -4,7 +4,8 @@
     "no-console": "off",
     "max-len": ["error", {
       "code": 120,
-      "ignoreStrings": true
+      "ignoreStrings": true,
+      "ignoreTemplateLiterals": true
     }]
   }
 }
