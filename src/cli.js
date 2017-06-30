@@ -1,9 +1,11 @@
 #!/usr/bin/env node
 
+/* eslint-disable no-use-before-define */
+
 // Dependencies
 const chalk = require('chalk');
 const inquirer = require('inquirer');
-const yargs = require('yargs');
+// const yargs = require('yargs');
 const netbank = require('..');
 const moment = require('moment-timezone');
 const Table = require('easy-table');
@@ -17,11 +19,6 @@ const renderCurrency = amount => (amount >= 0 ? chalk.green.bold(`$${amount}`) :
 
 function getAccountTitle(account) {
   const title = `${chalk.bold(account.name)} (${chalk.red(account.bsb)} ${chalk.red(account.account)})  =>  Balance: ${renderCurrency(account.balance)} Available Funds: ${renderCurrency(account.available)}`;
-  return title;
-}
-
-function getTransactionTitle(transaction) {
-  const title = `${chalk.italic.yellow(moment(transaction.timestamp).format('YYYY-MM-DD HH:mm'))}: ${transaction.description.replace(/\n/g, '')}\t${renderCurrency(transaction.amount)}`;
   return title;
 }
 
