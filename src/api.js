@@ -66,7 +66,7 @@ function lazyLoading(response, account) {
       }),
       partial: true,
     })
-    .then(parser.parseFormInPartialUpdate)
+    .then(parser.parseViewState)
     .then(resp => Object.assign({}, resp, { form: Object.assign({}, response.form, resp.form) }));
 }
 

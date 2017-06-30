@@ -125,46 +125,40 @@ function parseTransaction(json) {
 
 // Parsers
 
-function parseForm(resp) {
-  return new Promise((resolve, reject) => {
+function parseTitle(resp) {
+  return new Promise((resolve) => {
     const $ = cheerio.load(resp.body);
-
-    //  Parse Title
-    let title;
     if (resp.headers['content-type'] === 'text/html') {
-      title = $('title').text().trim();
-      debug(`parseForm(): title => ${title}`);
+      const m = /NetBank - ([^-]+)/.exec($('title').text());
+      if (m) {
+        const title = m[1].trim();
+        return resolve(Object.assign({}, resp, { title }));
+      }
     }
-
-    //  Parse Form
-    const formElement = $('form');
-    if (formElement.length === 0) {
-      return reject('Cannot find form in the page');
-    }
-
-    // serializeForm(formElement)
-    const form = {};
-    serializeArray(formElement, { disabled: true, button: true }).forEach((item) => {
-      form[item.name] = item.value;
-    });
-    return resolve(Object.assign({}, resp, { form, title }));
+    debug('parseTitle(): cannot find title');
+    return resolve(resp);
   });
 }
 
-function parseFormInPartialUpdate(resp) {
+function parseForm(resp) {
   return new Promise((resolve, reject) => {
-    //  get form section
     const $ = cheerio.load(resp.body);
-
     const form = {};
-    serializeArray($, { disabled: true, button: true }).forEach((item) => {
+    serializeArray($('form'), { disabled: true, button: true }).forEach((item) => {
       form[item.name] = item.value;
     });
 
-    if (form.length === 0) {
-      return reject('Cannot find form element in partial update');
+    if (Object.keys(form).length === 0) {
+      return reject('parseForm(): Cannot find form.');
     }
 
+    return resolve(Object.assign({}, resp, { form }));
+  });
+}
+
+function parseViewState(resp) {
+  return new Promise((resolve) => {
+    const form = Object.assign({}, resp.form);
     //  get new view state of asp.net
     const REGEX_VIEW_STATE = /(__VIEWSTATE|__EVENTVALIDATION|__VIEWSTATEGENERATOR)\|([^|]+)\|/g;
     let match = REGEX_VIEW_STATE.exec(resp.body);
@@ -172,7 +166,6 @@ function parseFormInPartialUpdate(resp) {
       form[match[1]] = match[2];
       match = REGEX_VIEW_STATE.exec(resp.body);
     }
-
     return resolve(Object.assign({}, resp, { form }));
   });
 }
@@ -220,7 +213,7 @@ function parseAccountList(resp) {
 }
 
 function parseHomePage(resp) {
-  return parseForm(resp).then(parseAccountList);
+  return parseForm(resp).then(parseTitle).then(parseAccountList);
 }
 
 function parseTransactions(resp) {
@@ -279,12 +272,14 @@ function parseAccountListWithKeys(resp) {
 }
 
 function parseTransactionPage(resp) {
-  return parseForm(resp).then(parseTransactions).then(parseAccountListWithKeys);
+  return parseForm(resp).then(parseTitle).then(parseTransactions).then(parseAccountListWithKeys);
 }
 
 module.exports = {
+  serializeArray,
+  parseTitle,
   parseForm,
-  parseFormInPartialUpdate,
+  parseViewState,
   parseAccountList,
   parseHomePage,
   parseCurrencyText,

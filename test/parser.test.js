@@ -1,6 +1,7 @@
 /* eslint-disable no-undef */
 
 // Dependencies
+const cheerio = require('cheerio');
 const parser = require('../src/parser');
 const fs = require('fs');
 const path = require('path');
@@ -40,6 +41,75 @@ const headersHtml = { 'content-type': 'text/html' };
 const headersJson = { 'content-type': 'text/json' };
 
 describe('parser.js', () => {
+  describe('- parseTitle()', () => {
+    test('should parse login page title to "Log on to NetBank"', () => {
+      expect.assertions(3);
+      return expect(
+        parser.parseTitle({ url: links.login, headers: headersHtml, body: pages.login }).then((resp) => {
+          expect(resp.url).toEqual(links.login);
+          expect(resp.title).toEqual('Log on to NetBank');
+          return resp;
+        }),
+      ).resolves.toBeDefined();
+    });
+    test('should parse home page title to "Home"', () => {
+      expect.assertions(3);
+      return expect(
+        parser.parseTitle({ url: links.home, headers: headersHtml, body: pages.homePage }).then((resp) => {
+          expect(resp.url).toEqual(links.home);
+          expect(resp.title).toEqual('Home');
+          return resp;
+        }),
+      ).resolves.toBeDefined();
+    });
+    test('should parse history page title to "Transactions"', () => {
+      expect.assertions(3);
+      return expect(
+        parser.parseTitle({ url: links.history, headers: headersHtml, body: pages.transactionList }).then((resp) => {
+          expect(resp.url).toEqual(links.history);
+          expect(resp.title).toEqual('Transactions');
+          return resp;
+        }),
+      ).resolves.toBeDefined();
+    });
+    test('should NOT parse partial page title', () => {
+      expect.assertions(3);
+      return expect(
+        parser.parseTitle({ url: links.login, headers: headersHtml, body: pages.transactionPartial }).then((resp) => {
+          expect(resp.url).toEqual(links.login);
+          expect(resp.title).not.toBeDefined();
+          return resp;
+        }),
+      ).resolves.toBeDefined();
+    });
+  });
+
+  describe('- serializeArray()', () => {
+    test('should get serialized form from HTML page (login page)', () => {
+      const form = {};
+      parser.serializeArray(cheerio.load(pages.login)('form'), { disabled: true, button: true }).forEach((item) => {
+        form[item.name] = item.value;
+      });
+      expect(Object.keys(form).length).toEqual(12);
+    });
+    test('should get serialized form from HTML page (home page)', () => {
+      const form = {};
+      parser.serializeArray(cheerio.load(pages.homePage)('form'), { disabled: true, button: true }).forEach((item) => {
+        form[item.name] = item.value;
+      });
+      expect(Object.keys(form).length).toEqual(22);
+    });
+    test('should get serialized form from HTML page (history page)', () => {
+      const form = {};
+      parser
+        .serializeArray(cheerio.load(pages.transactionList)('form'), { disabled: true, button: true })
+        .forEach((item) => {
+          form[item.name] = item.value;
+        });
+      expect(Object.keys(form).length).toEqual(40);
+    });
+  });
+
   describe('- parseForm()', () => {
     function parseForm(body = pages.transactionList) {
       return parser.parseForm({ url: links.login, headers: headersHtml, body }).then((resp) => {
@@ -49,7 +119,7 @@ describe('parser.js', () => {
     }
 
     test('should be able parse the properties', () => {
-      expect.assertions(11);
+      expect.assertions(10);
       return expect(
         parseForm(pages.login)
           .then((resp) => {
@@ -61,7 +131,6 @@ describe('parser.js', () => {
             expect(resp.form).toHaveProperty('txtMyClientNumber$field');
             expect(resp.form).toHaveProperty('txtMyPassword$field');
             expect(Object.keys(resp.form).length).toEqual(12);
-            expect(resp.title.indexOf('NetBank - Log on to NetBank') >= 0).toBeTruthy();
             return resp;
           })
           .catch((err) => {
@@ -87,13 +156,12 @@ describe('parser.js', () => {
       ).resolves.toBeDefined();
     });
     test('should parse <input type="radio" ...>', () => {
-      expect.assertions(5);
+      expect.assertions(4);
       return expect(
         parseForm(pages.transactionList)
           .then((resp) => {
             expect(resp.form.ctl00$BodyPlaceHolder$radioSwitchSearchType$field$).toEqual('AllTransactions');
             expect(resp.form.ctl00$BodyPlaceHolder$radioSwitchDateRange$field$).toEqual('TimePeriod');
-            expect(resp.title).toEqual('NetBank - Transactions');
             return resp;
           })
           .catch((err) => {
@@ -137,6 +205,32 @@ describe('parser.js', () => {
     test('should raise error if there is no form in the page', () => {
       expect.assertions(1);
       return expect(parseForm(pages.transactionPartial)).rejects.toBeDefined();
+    });
+  });
+
+  describe('- parseViewState()', () => {
+    test('should be able parse the VIEWSTATE from partial page', () => {
+      expect.assertions(8);
+      return expect(
+        parser
+          .parseViewState({ url: links.login, headers: headersHtml, body: pages.transactionPartial })
+          .then((resp) => {
+            /* eslint-disable dot-notation */
+            expect(Object.keys(resp.form).length).toEqual(3);
+            expect(resp.form).toHaveProperty('__VIEWSTATE');
+            expect(resp.form['__VIEWSTATE'].length).toBeGreaterThan(1);
+            expect(resp.form).toHaveProperty('__VIEWSTATEGENERATOR');
+            expect(resp.form['__VIEWSTATEGENERATOR'].length).toBeGreaterThan(1);
+            expect(resp.form).toHaveProperty('__EVENTVALIDATION');
+            expect(resp.form['__EVENTVALIDATION'].length).toBeGreaterThan(1);
+            /* eslint-enable dot-notation */
+            return resp;
+          })
+          .catch((err) => {
+            debug(err);
+            throw err;
+          }),
+      ).resolves.toBeDefined();
     });
   });
 
@@ -187,7 +281,6 @@ describe('parser.js', () => {
           }),
       ).resolves.toBeDefined();
     });
-
     test('should raise error if there is no account list in the page', () => {
       expect.assertions(1);
       return expect(
@@ -205,7 +298,7 @@ describe('parser.js', () => {
           .then((resp) => {
             expect(resp.url).toEqual(links.home);
 
-            expect(resp.title).toEqual('NetBank - Home');
+            expect(resp.title).toEqual('Home');
 
             expect(resp.form).toHaveProperty('RID');
             expect(resp.form).toHaveProperty('SID');
