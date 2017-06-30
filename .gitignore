@@ -54,4 +54,6 @@ test/auth.json*
 .coveralls.yml*
 dist/
 log/
+docs/
+.vscode/
 .yarnclean

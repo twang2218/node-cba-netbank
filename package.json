@@ -7,18 +7,23 @@
   "homepage": "https://github.com/twang2218/node-cba-netbank",
   "bugs": "https://github.com/twang2218/node-cba-netbank/issues",
   "main": "dist/api.js",
-  "bin": "bin/node-cba-netbank.js",
+  "bin": {
+    "cba-netbank": "dist/cli.js"
+  },
   "directories": {
     "lib": "./dist"
   },
   "dependencies": {
     "bluebird": "^3.5.0",
+    "chalk": "^2.0.1",
     "cheerio": "^0.22.0",
     "debug": "^2.6.8",
+    "easy-table": "^1.1.0",
     "inquirer": "^3.1.1",
     "moment-timezone": "^0.5.13",
     "request": "^2.81.0",
-    "request-promise": "^4.2.1"
+    "request-promise": "^4.2.1",
+    "yargs": "^8.0.2"
   },
   "devDependencies": {
     "babel-cli": "^6.24.1",
@@ -37,6 +42,8 @@
     "nock": "^9.0.13"
   },
   "scripts": {
+    "start": "node dist/cli.js",
+    "start-debug": "DEBUG=node-cba-netbank yarn start",
     "build": "babel src -d dist",
     "prepublish": "yarn build",
     "pretest": "yarn build && yarn eslint",

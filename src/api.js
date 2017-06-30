@@ -260,6 +260,7 @@ function getTransactions(account, from = toDateString(moment().subtract(6, 'year
 
 //  Exports
 module.exports = {
+  toDateString,
   login,
   getTransactions,
 };
