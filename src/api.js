@@ -67,6 +67,7 @@ function lazyLoading(response, account) {
       partial: true,
     })
     .then(parser.parseViewState)
+    .then(resp => parser.parseForm(resp).catch(() => resp))
     .then(resp => Object.assign({}, resp, { form: Object.assign({}, response.form, resp.form) }));
 }
 
@@ -100,34 +101,33 @@ function login(credentials) {
 
 function getMoreTransactions(response, account) {
   debug(`getMoreTransactions(account: ${account.name} [${account.number}] => ${account.available})`);
-  const acc = Object.assign({}, account);
-  const responseWithForm = Object.assign({}, response, {
-    form: Object.assign({}, response.form, {
-      // fill the form
-      ctl00$ctl00: 'ctl00$BodyPlaceHolder$UpdatePanelForAjax|ctl00$BodyPlaceHolder$UpdatePanelForAjax',
-      __EVENTTARGET: 'ctl00$BodyPlaceHolder$UpdatePanelForAjax',
-      __EVENTARGUMENT: 'doPostBackApiCall|LoadTransactions|{"ClearCache":"false","IsSorted":false,"IsAdvancedSearch":true,"IsMonthSearch":false}',
-    }),
+  const form = Object.assign({}, response.form, {
+    // fill the form
+    ctl00$ctl00: 'ctl00$BodyPlaceHolder$UpdatePanelForAjax|ctl00$BodyPlaceHolder$UpdatePanelForAjax',
+    __EVENTTARGET: 'ctl00$BodyPlaceHolder$UpdatePanelForAjax',
+    __EVENTARGUMENT: 'doPostBackApiCall|LoadTransactions|{"ClearCache":"false","IsSorted":false,"IsAdvancedSearch":true,"IsMonthSearch":false}',
   });
   // send the request
   return web
     .post({
       url: getUrl(account.link),
-      form: responseWithForm.form,
+      form,
       partial: true,
     })
     .then(parser.parseTransactions)
     .then(refreshBase)
     .then((resp) => {
-      acc.link = Url.parse(resp.url).path;
       if (!resp.more || resp.limit) {
         //  There is no more transactions or reached the limit.
         return resp;
       }
       return (
-        getMoreTransactions(responseWithForm, account)
+        getMoreTransactions(
+          Object.assign({}, resp, { form }),
+          Object.assign({}, account, { link: Url.parse(resp.url).path }),
+        )
           //  concat more transactions.
-          .then(r => Object.assign({}, responseWithForm, { transactions: concat(resp.transactions, r.transactions) }))
+          .then(r => Object.assign({}, r, { form, transactions: concat(resp.transactions, r.transactions) }))
           //  Ignore the error as we have got some transactions already
           .catch((error) => {
             debug(error);
@@ -141,42 +141,50 @@ function getTransactionsByDate(response, account, from, to) {
   debug(
     `getTransactionsByDate(account: ${account.name} [${account.number}] => ${account.available}, from: ${from}, to: ${to})`,
   );
-  const acc = Object.assign({}, account);
-  const responseWithForm = Object.assign({}, response, {
-    form: Object.assign({}, response.form, {
-      // fill the form
-      ctl00$ctl00: 'ctl00$BodyPlaceHolder$updatePanelSearch|ctl00$BodyPlaceHolder$lbSearch',
-      __EVENTTARGET: 'ctl00$BodyPlaceHolder$lbSearch',
-      __EVENTARGUMENT: '',
-      ctl00$BodyPlaceHolder$searchTypeField: '1',
-      ctl00$BodyPlaceHolder$radioSwitchDateRange$field$: 'ChooseDates',
-      ctl00$BodyPlaceHolder$dateRangeField: 'ChooseDates',
-      ctl00$BodyPlaceHolder$fromCalTxtBox$field: from,
-      ctl00$BodyPlaceHolder$toCalTxtBox$field: to,
-      //  Add this for partial update
-      ctl00$BodyPlaceHolder$radioSwitchSearchType$field$: 'AllTransactions',
-    }),
+  const form = Object.assign({}, response.form, {
+    // fill the form
+    ctl00$ctl00: 'ctl00$BodyPlaceHolder$updatePanelSearch|ctl00$BodyPlaceHolder$lbSearch',
+    __EVENTTARGET: 'ctl00$BodyPlaceHolder$lbSearch',
+    __EVENTARGUMENT: '',
+    ctl00$BodyPlaceHolder$searchTypeField: '1',
+    ctl00$BodyPlaceHolder$radioSwitchDateRange$field$: 'ChooseDates',
+    ctl00$BodyPlaceHolder$dateRangeField: 'ChooseDates',
+    ctl00$BodyPlaceHolder$fromCalTxtBox$field: from,
+    ctl00$BodyPlaceHolder$toCalTxtBox$field: to,
+    //  Add this for partial update
+    ctl00$BodyPlaceHolder$radioSwitchSearchType$field$: 'AllTransactions',
   });
 
   return web
     .post({
       url: getUrl(account.link),
-      form: responseWithForm.form,
+      form,
       partial: true,
     })
     .then(parser.parseTransactions)
     .then(refreshBase)
     .then((resp) => {
-      acc.link = Url.parse(resp.url).path;
       if (!resp.more || resp.limit) {
         //  there is no more transactions or reached the limit.
         return resp;
       }
-      //  we got some transactions, there might be more of them.
+      //  There are more transactions available.
       return (
-        getMoreTransactions(responseWithForm, account)
+        getMoreTransactions(
+          Object.assign({}, resp, { form }),
+          Object.assign({}, account, { link: Url.parse(resp.url).path }),
+        )
           //  concat more transactions.
-          .then(r => Object.assign({}, responseWithForm, { transactions: concat(resp.transactions, r.transactions) }))
+          .then(r => Object.assign({}, r, { form, transactions: concat(resp.transactions, r.transactions) }))
+          .then((r) => {
+            debug(`getTransactionsByDate(): getMoreTransactions(): More => ${r.more}, Limit => ${r.limit}`);
+            if (r.more && r.limit) {
+              //  if there are more transactions, however it reaches limit
+              //  we need to send another search request to overcome the limit.
+              throw Object.assign(new Error('Reach transations limit'), { response: r });
+            }
+            return r;
+          })
           .catch((error) => {
             //  an error happend during load more, it means that it may have more,
             //  however, some restriction made it stopped, so we call it again,
@@ -186,9 +194,13 @@ function getTransactionsByDate(response, account, from, to) {
 
             debug(error);
 
-            //  find the earliest date as 'to' date.
-            let timestamp = resp.transactions[0].timestamp;
-            resp.transactions.forEach((t) => {
+            //  if there is a `response` object attached to `error` object, that means
+            //  it's just reach the limit, and contains transations. Otherwise, it don't
+            //  have the transactions, a real error, then use previous `resp` instead.
+            const r = error.response || resp;
+            //  find the earliest date as new 'to' date.
+            let timestamp = r.transactions[0].timestamp;
+            r.transactions.forEach((t) => {
               if (timestamp > t.timestamp) {
                 timestamp = t.timestamp;
               }
@@ -196,19 +208,22 @@ function getTransactionsByDate(response, account, from, to) {
             const newTo = toDateString(timestamp);
 
             // Call self again
-            debug('getTransactionsByDate(): Got error during loading, so call self again to give it another try');
+            debug(`Call getTransactionsByDate() again with new 'to' date (${to} => ${newTo})`);
             return (
-              getTransactionsByDate(responseWithForm, account, from, newTo)
+              getTransactionsByDate(
+                Object.assign({}, r, { form }),
+                Object.assign({}, account, { link: Url.parse(r.url).path }),
+                from,
+                newTo,
+              )
                 //  concat more transactions
-                .then(r =>
-                  Object.assign({}, responseWithForm, { transactions: concat(resp.transactions, r.transactions) }),
-                )
-                .catch(() => {
+                .then(rr => Object.assign({}, rr, { form, transactions: concat(r.transactions, rr.transactions) }))
+                .catch((err) => {
                   //  cannot call it again, but we got some transactions at least,
                   //  so, just call it a success.
-                  debug(error);
+                  debug(err);
                   debug('getTransactionsByDate(): failed to call self again to load more');
-                  return Object.assign({}, responseWithForm, { transactions: resp.transactions });
+                  return Object.assign({}, r, { form, transactions: r.transactions });
                 })
             );
           })
@@ -216,22 +231,20 @@ function getTransactionsByDate(response, account, from, to) {
     });
 }
 
-function getTransactions(account) {
+//  Get transaction history data for given time period.
+//
+//  * `from`: Default download begin at 6 years ago. FYI, I tried 8 years
+//    without getting any error message, however, keep in mind that bank
+//    usually only stored 2 years transactions history data.
+//  * `to`: Default value is today.
+function getTransactions(account, from = toDateString(moment().subtract(6, 'years').valueOf()), to = toDateString(moment().valueOf())) {
   debug(`getTransactions(account: ${account.name} [${account.number}] => ${account.available})`);
-  const acc = Object.assign({}, account);
   //  retrieve post form and key for the given account
   return web.get(getUrl(account.link)).then(parser.parseTransactionPage).then(refreshBase).then((resp) => {
-    acc.link = Url.parse(resp.url).path;
+    const acc = Object.assign({}, account, { link: Url.parse(resp.url).path });
     if (resp.accounts !== null) {
       acc.key = resp.accounts.find(a => a.number === account.number).key;
     }
-
-    //  Download range from now to 5 years ago, as normally bank doesn't
-    //  keep transactions log for too long. FYI, tried 8 years without error
-    //  message in the first place, however, bank only stored 2 years transactions
-    //  data.
-    const from = toDateString(moment().subtract(2, 'years').valueOf());
-    const to = toDateString(moment().valueOf());
 
     //  if the transaction section is lazy loading, we need do a panel update
     //  first, before the real search.

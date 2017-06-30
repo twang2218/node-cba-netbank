@@ -128,10 +128,12 @@ function parseTransaction(json) {
 function parseTitle(resp) {
   return new Promise((resolve) => {
     const $ = cheerio.load(resp.body);
-    if (resp.headers['content-type'] === 'text/html') {
+    const contentType = resp.headers['content-type'];
+    if (contentType && contentType.indexOf('text/html') >= 0) {
       const m = /NetBank - ([^-]+)/.exec($('title').text());
       if (m) {
         const title = m[1].trim();
+        debug(`parseTitle(): found title => '${title}'`);
         return resolve(Object.assign({}, resp, { title }));
       }
     }
@@ -152,7 +154,7 @@ function parseForm(resp) {
       return reject('parseForm(): Cannot find form.');
     }
 
-    return resolve(Object.assign({}, resp, { form }));
+    return resolve(Object.assign({}, resp, { form: Object.assign({}, resp.form, form) }));
   });
 }
 
@@ -166,7 +168,7 @@ function parseViewState(resp) {
       form[match[1]] = match[2];
       match = REGEX_VIEW_STATE.exec(resp.body);
     }
-    return resolve(Object.assign({}, resp, { form }));
+    return resolve(Object.assign({}, resp, { form: Object.assign({}, resp.form, form) }));
   });
 }
 

@@ -38,6 +38,7 @@ const links = {
 };
 
 const headersHtml = { 'content-type': 'text/html' };
+const headersHtmlWithCharset = { 'content-type': 'text/html; charset=utf-8' };
 const headersJson = { 'content-type': 'text/json' };
 
 describe('parser.js', () => {
@@ -55,7 +56,7 @@ describe('parser.js', () => {
     test('should parse home page title to "Home"', () => {
       expect.assertions(3);
       return expect(
-        parser.parseTitle({ url: links.home, headers: headersHtml, body: pages.homePage }).then((resp) => {
+        parser.parseTitle({ url: links.home, headers: headersHtmlWithCharset, body: pages.homePage }).then((resp) => {
           expect(resp.url).toEqual(links.home);
           expect(resp.title).toEqual('Home');
           return resp;
