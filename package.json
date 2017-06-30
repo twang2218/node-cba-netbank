@@ -6,10 +6,10 @@
   "license": "Apache-2.0",
   "homepage": "https://github.com/twang2218/node-cba-netbank",
   "bugs": "https://github.com/twang2218/node-cba-netbank/issues",
-  "main": "lib/api.js",
+  "main": "dist/api.js",
   "bin": "bin/node-cba-netbank.js",
   "directories": {
-    "lib": "./lib"
+    "lib": "./dist"
   },
   "dependencies": {
     "bluebird": "^3.5.0",
@@ -37,13 +37,14 @@
     "nock": "^9.0.13"
   },
   "scripts": {
-    "build": "babel src -d lib",
+    "build": "babel src -d dist",
     "prepublish": "yarn build",
+    "pretest": "yarn build && yarn eslint",
     "eslint": "eslint src test",
     "test": "jest --coverage --verbose",
-    "test-debug": "DEBUG=node-cba-netbank jest --runInBand --coverage --verbose",
-    "test-coveralls": "DEBUG=node-cba-netbank jest --coverage && cat ./coverage/lcov.info | coveralls",
-    "clean": "rm -rf ./log/* ./coverage ./lib"
+    "test-debug": "DEBUG=node-cba-netbank yarn test -- --runInBand",
+    "test-coveralls": "yarn test-debug && cat ./coverage/lcov.info | coveralls",
+    "clean": "rm -rf ./log/* ./coverage ./dist"
   },
   "repository": "twang2218/node-cba-netbank",
   "keywords": [

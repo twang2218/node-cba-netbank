@@ -52,6 +52,6 @@ cscope.po.out
 
 test/auth.json*
 .coveralls.yml*
-lib/
+dist/
 log/
 .yarnclean

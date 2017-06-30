@@ -4,7 +4,8 @@
 const nock = require('nock');
 const fs = require('fs');
 const path = require('path');
-const api = require('../src/api');
+//  use `dist` version of api, so the babel output is also tested.
+const api = require('..');
 const debug = require('debug')('node-cba-netbank');
 
 // jasmine.DEFAULT_TIMEOUT_INTERVAL = 600000;
