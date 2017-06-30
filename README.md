@@ -25,113 +25,63 @@ Usage
 ### List Accounts
 
 ```js
-var netbank = require('node-cba-netbank');
+const netbank = require('node-cba-netbank');
 
-var credential = {
-  username: '76543210',
-  password: 'YourPassword'
-};
-
-netbank.login(credential, function (error, accounts) {
-  if (error === null) {
+netbank.login({ username: '76543210', password: 'YOUR_PASSWORD' })
+  .then(resp => {
     //  output account to console
-    console.log(accounts);
-  } else {
-    console.error(error);
-  }
-});
+    resp.accounts.forEach(a => console.log(`${a.name} (${a.bsb} ${a.account}) => ${a.balance}/${a.available}`));
+  })
+  .catch(console.error);
 ```
 
 Just replace `76543210` with your client number, and replace
-`YourPassword` with your netbank password.
+`YOUR_PASSWORD` with your netbank password.
 
 The result will look like below:
 
 ```js
-[{
-    nickname: 'Smart Access',
-    url: '/netbank/TransactionHistory/History.aspx?ACCOUNT_PRODUCT_TYPE=DDA&DEEPLINKING_WITH_CONTEXT=True&_e=UGxheSB3aXRoIG1hZ2ljISAxCg%3d&RID=N4bdFut-vECN0pmnBx5aMA&SID=tGfirrUiubE%3d',
-    bsbNumber: '06 2001',
-    accountNumber: '1234 0001',
-    number: '06200112340001',
-    balance: 987.65,
-    availableFunds: 907.65
-}, {
-    nickname: 'NetBank Saver',
-    url: '/netbank/TransactionHistory/History.aspx?ACCOUNT_PRODUCT_TYPE=DDA&DEEPLINKING_WITH_CONTEXT=True&_e=UGxheSB3aXRoIG1hZ2ljISAyCg%3d%3d&RID=N4bdFut-vECN0pmnBx5aMA&SID=tGfirrUiubE%3d',
-    bsbNumber: '06 2002',
-    accountNumber: '1234 0012',
-    number: '06200212340012',
-    balance: 4321.01,
-    availableFunds: 4021.00
-},{
+Smart Access (062001 12340001) => 987.65/907.65
+NetBank Saver (062002 12340012) => 4321.01/4021.00
 ...
-}]
 ```
 
-For each account:
+For each account, there are following properties:
 
- * ```nickname```: Account name;
- * ```url```: Transaction page for the account, it will be different everytime you logged in;
- * ```bsbNumber```: BSB number;
- * ```accountNumber```: Account number (without BSB part);
- * ```number```: The entire account number, without space;
- * ```balance```: Current account balance. It might be different from the available funds;
- * ```availableFunds```: Current available funds of the account.
+ * `name`: Account name;
+ * `url`: Transaction page for the account, it will be different everytime you logged in;
+ * `bsb`: BSB number;
+ * `account`: Account number (without BSB part);
+ * `number`: The entire account number, `bsb`+`account`, without space;
+ * `balance`: Current account balance. It might be different from the available funds;
+ * `available`: Current available funds of the account.
 
  ### Retrieve Transactions for Given Account
 
- ```js
- var netbank = require('node-cba-netbank');
+```js
+ const netbank = require('node-cba-netbank');
 
- var credential = {
-   username: '76543210',
-   password: 'YourPassword'
- };
-
- // Login first
- netbank.login(credential, function (error, accounts) {
-   if (error === null) {
-     // Assume we are going to retrieve the transactions of the first account
-     netbank.getTransactions(accounts[0], function (error, transactions) {
-       if (error === null) {
-         // output the transactions to console, be aware, it might be a lot.
-         console.log(transactions);
-       } else {
-         console.error(error);
-       }
-     });
-   } else {
-     console.error(error);
-   }
- });
-
- ```
+netbank.login({ username: '76543210', password: 'YOUR_PASSWORD' })
+  // Assume we are going to retrieve the transactions of the first account
+  .then(resp => netbank.getTransactions(resp.accounts[0]))
+  .then((resp) => {
+    //  output transactions to console
+    resp.transactions.forEach(t => console.log(`${t.date} ${t.description} => ${t.amount}`));
+  })
+  .catch(console.error);
+```
 
  **Be aware, it might take several minutes if there are thousands transactions.**
 
  The transaction list will look like below:
 
- ```js
- [ { timestamp: 1429488000004,
-    date: '2015-04-20T00:00:00.004Z',
-    description: 'SO THAI RESTAURANT       KOGARAH',
-    amount: -13.9,
-    balance: 0,
-    trancode: '00 05',
-    receiptnumber: '' },
-  { timestamp: 1429488000003,
-    date: '2015-04-20T00:00:00.003Z',
-    description: 'NOK NOK                  SYDNEY',
-    amount: -41.8,
-    balance: 0,
-    trancode: '00 05',
-    receiptnumber: '' },
-    ...
-  ]
- ```
+```
+2015-04-20T00:00:00.004Z SO THAI RESTAURANT       KOGARAH => -13.9
+2015-04-20T00:00:00.003Z NOK NOK                  SYDNEY => -41.8
+...
+```
 
-For each transaction:
+For each transaction object, there are following properties:
 
 * ```timestamp```: Timestamp of given transaction, it's milliseconds since epoch. Although, it might be pretty accurate for some accounts (non-credit card account), it might just be accurate at date level;
 * ```date```: It's human readable date format;
@@ -141,23 +91,24 @@ For each transaction:
 * ```trancode```: It's a category code for the transaction, such as ATM, EFTPOS, cash out might be different code;
 * ```receiptnumber```: The receipt number for the transaction. However, I cannot found it on my real paper receipt, and the field might be missing for some accounts, such as credit card account;
 
-
 Testing
 -------
 
-To enable real world testing, please put a JSON file, ```auth.json``` under ```./test/``` directory, and put content of real credential information in it:
+Offline test can be done by simply run `yarn test`.
+
+To enable real world testing, please put a JSON file, `auth.json` under `./test/` directory, and put content of real credential information in it:
 
 ```js
 {
   "username": "76543210",
-  "password": "YourPassword"
+  "password": "YOUR_PASSWORD"
 }
 ```
 
 Then run command:
 
 ```bash
-npm test
+yarn test
 ```
 
 The test will try to login and get transactions from the first account, and if it will fail if the retrieved transactions number is less than 1000. It's ok if you don't have that much transactions in the account. The purpose of checking whether it get more than 1000 transactions is to check whether it can overcome the maximum transactions limits.
