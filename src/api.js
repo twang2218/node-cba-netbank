@@ -5,12 +5,14 @@ const parser = require('./parser');
 const Url = require('url');
 const debug = require('debug')('node-cba-netbank');
 
-// Constant
 moment.tz.setDefault('Australia/Sydney');
+
+// Constant
 const LINK = {
   BASE: 'https://www.my.commbank.com.au',
-  LOGIN: '/netbank/Logon/Logon.aspx',
-  TRANSACTION: '/netbank/TransactionHistory/History.aspx?RID=:RID&SID=:SID',
+  LOGON: '/netbank/Logon/Logon.aspx',
+  HOME: '/netbank/Portfolio/Home/Home.aspx?RID=:RID&SID=:SID',
+  HISTORY: '/netbank/TransactionHistory/History.aspx?RID=:RID&SID=:SID',
   EXPORT: '/netbank/TransactionHistory/Exports.aspx?RID=:RID&SID=:SID&ExportType=OFX',
 };
 
@@ -72,18 +74,18 @@ function lazyLoading(response, account) {
 }
 
 //  API
-function login(credentials) {
-  //  retrieve the login page
+function logon(credentials) {
+  //  retrieve the logon page
   return (
     web
-      .get(getUrl(LINK.LOGIN))
-      //  Parse the page to get login form
+      .get(getUrl(LINK.LOGON))
+      //  Parse the page to get logon form
       .then(refreshBase)
       .then(parser.parseForm)
       .then(resp =>
-        //  fill the login form and submit
+        //  fill the logon form and submit
         web.post({
-          url: getUrl(LINK.LOGIN),
+          url: getUrl(LINK.LOGON),
           form: Object.assign({}, resp.form, {
             txtMyClientNumber$field: credentials.username,
             txtMyPassword$field: credentials.password,
@@ -237,8 +239,8 @@ function getTransactionsByDate(response, account, from, to) {
 //    without getting any error message, however, keep in mind that bank
 //    usually only stored 2 years transactions history data.
 //  * `to`: Default value is today.
-function getTransactions(account, from = toDateString(moment().subtract(6, 'years').valueOf()), to = toDateString(moment().valueOf())) {
-  debug(`getTransactions(account: ${account.name} [${account.number}] => ${account.available})`);
+function getTransactionHistory(account, from = toDateString(moment().subtract(6, 'years').valueOf()), to = toDateString(moment().valueOf())) {
+  debug(`getTransactionHistory(account: ${account.name} [${account.number}] => ${account.available})`);
   //  retrieve post form and key for the given account
   return web.get(getUrl(account.link)).then(parser.parseTransactionPage).then(refreshBase).then((resp) => {
     const acc = Object.assign({}, account, { link: Url.parse(resp.url).path });
@@ -252,7 +254,7 @@ function getTransactions(account, from = toDateString(moment().subtract(6, 'year
       return lazyLoading(resp, acc).then(r => getTransactionsByDate(r, acc, from, to));
     }
     return getTransactionsByDate(resp, acc, from, to).then((r) => {
-      debug(`getTransactions(): Total received ${r.transactions.length} transactions.`);
+      debug(`getTransactionHistory(): Total received ${r.transactions.length} transactions.`);
       return r;
     });
   });
@@ -261,6 +263,6 @@ function getTransactions(account, from = toDateString(moment().subtract(6, 'year
 //  Exports
 module.exports = {
   toDateString,
-  login,
-  getTransactions,
+  logon,
+  getTransactionHistory,
 };

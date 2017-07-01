@@ -4,8 +4,7 @@
 const nock = require('nock');
 const fs = require('fs');
 const path = require('path');
-//  use `dist` version of api, so the babel output is also tested.
-const api = require('..');
+const api = require('../src/api');
 const debug = require('debug')('node-cba-netbank');
 
 // jasmine.DEFAULT_TIMEOUT_INTERVAL = 600000;
@@ -13,8 +12,8 @@ const debug = require('debug')('node-cba-netbank');
 const getFilePath = file => path.resolve(path.resolve(__dirname, 'test_cases'), file);
 
 const pages = {
-  //  login page
-  login: getFilePath('01-login-page.html'),
+  //  logon page
+  logon: getFilePath('01-logon-page.html'),
   //  account list page
   homePage: getFilePath('02-home-page.html'),
   //  transactions page
@@ -41,10 +40,10 @@ function mockWebsite() {
     nock('https://www.my.commbank.com.au')
       //  Remove the query string
       .filteringPath(/\?.*$/g, '')
-      //  Login page
+      //  Logon page
       .get('/netbank/Logon/Logon.aspx')
-      .replyWithFile(200, pages.login)
-      //  Login page: submit login form with right credential
+      .replyWithFile(200, pages.logon)
+      //  Logon page: submit logon form with right credential
       .post('/netbank/Logon/Logon.aspx', (body) => {
         if (body.txtMyClientNumber$field === credential.username && body.txtMyPassword$field === credential.password) {
           isLoggedIn = true;
@@ -54,9 +53,9 @@ function mockWebsite() {
         return false;
       })
       .replyWithFile(200, pages.homePage)
-      //  Login page: submit login form with wrong credential
+      //  Logon page: submit logon form with wrong credential
       .post('/netbank/Logon/Logon.aspx')
-      .replyWithFile(200, pages.login)
+      .replyWithFile(200, pages.logon)
       //  retrieve transaction page (logged in)
       .get('/netbank/TransactionHistory/History.aspx')
       .replyWithFile(200, pages.transactionList)
@@ -87,14 +86,14 @@ describe('api.js', () => {
       nock.enableNetConnect();
     });
 
-    describe('- login()', () => {
+    describe('- logon()', () => {
       it(
-        'should be able to login with correct credential',
+        'should be able to logon with correct credential',
         () => {
           expect.assertions(3);
           return expect(
             api
-              .login(credential)
+              .logon(credential)
               .then((resp) => {
                 expect(resp.accounts).toBeDefined();
                 expect(resp.accounts.length).toBeGreaterThan(1);
@@ -112,24 +111,24 @@ describe('api.js', () => {
         'should failed if credential is not working',
         () => {
           expect.assertions(1);
-          return expect(api.login(credentialWrong)).rejects.toBeDefined();
+          return expect(api.logon(credentialWrong)).rejects.toBeDefined();
         },
         10000,
       );
     });
 
-    describe('- getTransactions()', () => {
+    describe('- getTransactionHistory()', () => {
       it(
         'should retrieve transactions for given account',
         () => {
           expect.assertions(5);
           return expect(
             api
-              .login(credential)
+              .logon(credential)
               .then((resp) => {
                 expect(resp.accounts).toBeDefined();
                 expect(resp.accounts.length).toBeGreaterThan(0);
-                return api.getTransactions(resp.accounts[0]);
+                return api.getTransactionHistory(resp.accounts[0]);
               })
               .then((resp) => {
                 expect(resp.transactions).toBeDefined();
@@ -148,7 +147,7 @@ describe('api.js', () => {
   } else {
     // use nock to mock the website
     debug('Mocking website ...');
-    describe('- login()', () => {
+    describe('- logon()', () => {
       beforeEach(() => {
         mockWebsite();
         nock.disableNetConnect();
@@ -158,11 +157,11 @@ describe('api.js', () => {
         nock.enableNetConnect();
       });
 
-      it('should be able to login with correct credential', () => {
+      it('should be able to logon with correct credential', () => {
         expect.assertions(3);
         return expect(
           api
-            .login(credential)
+            .logon(credential)
             .then((resp) => {
               expect(resp.accounts).toBeDefined();
               expect(resp.accounts.length).toBeGreaterThan(1);
@@ -176,11 +175,11 @@ describe('api.js', () => {
       });
       it('should failed if credential is not working', () => {
         expect.assertions(1);
-        return expect(api.login(credentialWrong)).rejects.toBeDefined();
+        return expect(api.logon(credentialWrong)).rejects.toBeDefined();
       });
     });
 
-    describe('- getTransactions()', () => {
+    describe('- getTransactionHistory()', () => {
       beforeEach(() => {
         mockWebsite();
         nock.disableNetConnect();
@@ -194,11 +193,11 @@ describe('api.js', () => {
         expect.assertions(5);
         return expect(
           api
-            .login(credential)
+            .logon(credential)
             .then((resp) => {
               expect(resp.accounts).toBeDefined();
               expect(resp.accounts.length).toEqual(4);
-              return api.getTransactions(resp.accounts[0]);
+              return api.getTransactionHistory(resp.accounts[0]);
             })
             .then((resp) => {
               expect(resp.transactions).toBeDefined();
@@ -213,7 +212,7 @@ describe('api.js', () => {
       });
       it('should failed if error happend during the transactions page parsing', () => {
         expect.assertions(1);
-        return expect(api.login(credentialWrong)).rejects.toBeDefined();
+        return expect(api.logon(credentialWrong)).rejects.toBeDefined();
       });
     });
   }

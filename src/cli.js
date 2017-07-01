@@ -31,7 +31,7 @@ function fetchHistory(answer) {
     //  download 6 months transactions
     console.log(`Downloading 6 months history for ${getAccountTitle(account)} ...`);
     return netbank
-      .getTransactions(account, netbank.toDateString(moment().subtract(6, 'months').valueOf()))
+      .getTransactionHistory(account, netbank.toDateString(moment().subtract(6, 'months').valueOf()))
       .then(showTransactions);
   }
   throw new Error('Quit.');
@@ -54,11 +54,11 @@ function showTransactions(resp) {
     .then(fetchHistory);
 }
 
-function login(credential) {
+function logon(credential) {
   console.log(`Logging into the netbank as account ${credential.username} ...`);
   return (
     netbank
-      .login(credential)
+      .logon(credential)
       .catch(() =>
         inquirer
           .prompt({
@@ -117,9 +117,9 @@ function main() {
   }
 
   if (questions.length > 0) {
-    return inquirer.prompt(questions).then(login);
+    return inquirer.prompt(questions).then(logon);
   }
-  return login(credential);
+  return logon(credential);
 }
 
 console.table([{ name: 'foo' }, { name: 'bar' }]);
