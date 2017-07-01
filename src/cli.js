@@ -13,51 +13,41 @@ const debug = require('debug')('node-cba-netbank');
 
 moment.tz.setDefault('Australia/Sydney');
 
-let accounts = [];
+const msgQuit = 'quit';
+const tagQuit = chalk.red('<Quit>');
 
-const renderCurrency = amount => (amount >= 0 ? chalk.green.bold(`$${amount}`) : chalk.red.bold(`$${amount}`));
-
-function getAccountTitle(account) {
-  const title = `${chalk.bold(account.name)} (${chalk.red(account.bsb)} ${chalk.red(account.account)})  =>  Balance: ${renderCurrency(account.balance)} Available Funds: ${renderCurrency(account.available)}`;
-  return title;
-}
-
-function fetchHistory(answer) {
-  debug(`fetchHistory(): accounts[${accounts.length}]`);
-  debug(`[${accounts.map(a => a.name)}]`);
-  const account = accounts.find(v => answer.account.number === v.number);
-  if (account) {
-    debug(`fetchHistory(${getAccountTitle(answer.account)}): found account ${getAccountTitle(account)}`);
-    //  download 6 months transactions
-    console.log(`Downloading 6 months history for ${getAccountTitle(account)} ...`);
-    return netbank
-      .getTransactionHistory(account, netbank.toDateString(moment().subtract(6, 'months').valueOf()))
-      .then(showTransactions);
+class Render {
+  static currency(amount) {
+    return amount >= 0 ? chalk.green.bold(`$${amount}`) : chalk.red.bold(`$${amount}`);
   }
-  throw new Error('Quit.');
+  static account(account) {
+    return (
+      `${chalk.bold(account.name)} (${chalk.red(account.bsb)} ${chalk.red(account.account)})` +
+      '  =>  ' +
+      `Balance: ${Render.currency(account.balance)} ` +
+      `Available Funds: ${Render.currency(account.available)}`
+    );
+  }
+  static transactions(transactions) {
+    return Table.print(
+      transactions.map(t => ({
+        Time: chalk.italic.yellow(moment(t.timestamp).format('YYYY-MM-DD HH:mm')),
+        Description: t.description.replace(/\n/g, ''),
+        Amount: Render.currency(t.amount),
+      })),
+    );
+  }
 }
 
-function showTransactions(resp) {
-  console.log(Table.print(resp.transactions.map(t => ({
-    Time: chalk.italic.yellow(moment(t.timestamp).format('YYYY-MM-DD HH:mm')),
-    Description: t.description.replace(/\n/g, ''),
-    Amount: renderCurrency(t.amount),
-  }))));
-  console.log(`Retrieved ${resp.transactions.length} transactions.`);
-  return inquirer
-    .prompt({
-      type: 'list',
-      name: 'account',
-      message: 'Which account?',
-      choices: accounts.map(a => ({ name: getAccountTitle(a), value: a })).concat([chalk.red('<Quit>')]),
-    })
-    .then(fetchHistory);
-}
+/* eslint-disable class-methods-use-this */
+class UI {
+  constructor() {
+    this.accounts = [];
+  }
 
-function logon(credential) {
-  console.log(`Logging into the netbank as account ${credential.username} ...`);
-  return (
-    netbank
+  logon(credential) {
+    console.log(`Logon as account ${credential.username} ...`);
+    return netbank
       .logon(credential)
       .catch(() =>
         inquirer
@@ -69,23 +59,62 @@ function logon(credential) {
           .then((answer) => {
             if (answer.tryagain) {
               console.log();
-              return main();
+              return this.logon();
             }
             throw new Error('Quit');
           }),
       )
-      //  user select an account to download transaction, or quit.
       .then((resp) => {
-        accounts = resp.accounts;
-        return inquirer.prompt({
-          type: 'list',
-          name: 'account',
-          message: 'Which account?',
-          choices: resp.accounts.map(a => ({ name: getAccountTitle(a), value: a })).concat([chalk.red('<Quit>')]),
-        });
+        this.accounts = resp.accounts;
+        return this.chooseAccountAndShowHistory(this.accounts);
       })
-      .then(fetchHistory)
-  );
+      .catch((error) => {
+        debug(error);
+        console.log('Bye!');
+      });
+  }
+
+  chooseAccountAndShowHistory() {
+    return this.selectAccount()
+      .then(account =>
+        this.downloadHistoryAndShow(account, netbank.toDateString(moment().subtract(2, 'months').valueOf())),
+      )
+      .then(() => this.chooseAccountAndShowHistory());
+  }
+
+  selectAccount() {
+    return inquirer
+      .prompt({
+        type: 'list',
+        name: 'account',
+        message: 'Which account?',
+        choices: this.accounts.map(a => ({ name: Render.account(a), value: a })).concat([tagQuit]),
+      })
+      .then((answer) => {
+        if (answer.account === tagQuit) {
+          throw new Error(msgQuit);
+        }
+        const account = this.accounts.find(v => answer.account.number === v.number);
+        if (!account) {
+          throw new Error(msgQuit);
+        }
+        debug(`selectAccount(${Render.account(answer.account)}): found account ${Render.account(account)}`);
+        return account;
+      });
+  }
+
+  downloadHistory(account, from, to) {
+    console.log(`Downloading history [${from} => ${to}] ...`);
+    return netbank.getTransactionHistory(account, from, to).then(resp => resp.transactions);
+  }
+
+  downloadHistoryAndShow(account, from, to = netbank.toDateString(moment().valueOf())) {
+    return this.downloadHistory(account, from, to).then((transactions) => {
+      console.log(Render.transactions(transactions));
+      console.log(`Total ${transactions.length} transactions.`);
+      return transactions;
+    });
+  }
 }
 
 function main() {
@@ -116,12 +145,11 @@ function main() {
     });
   }
 
+  const ui = new UI();
   if (questions.length > 0) {
-    return inquirer.prompt(questions).then(logon);
+    return inquirer.prompt(questions).then(c => ui.logon(c));
   }
-  return logon(credential);
+  return ui.logon(credential);
 }
 
-console.table([{ name: 'foo' }, { name: 'bar' }]);
-
-main().then(() => console.log('bye')).catch(debug);
+main().catch(debug);
