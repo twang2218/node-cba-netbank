@@ -6,8 +6,8 @@ node_js:
   - '4'
 git:
   depth: 10
-before_script: yarn build
-after_success: yarn test-coveralls
+script: yarn test-debug
+after_success: yarn coveralls
 deploy:
   provider: npm
   email: twang2218@gmail.com
