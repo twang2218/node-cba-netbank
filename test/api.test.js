@@ -15,13 +15,13 @@ const pages = {
   //  logon page
   logon: getFilePath('01-logon-page.html'),
   //  account list page
-  homePage: getFilePath('02-home-page.html'),
-  //  transactions page
-  transactionList: getFilePath('03-transaction-page.html'),
-  //  transactions page
-  transactionPartial: getFilePath('04-transaction-partial.txt'),
-  //  final empty transactions page
-  transactionEmpty: getFilePath('05-transaction-empty.txt'),
+  home: getFilePath('02-home-page.html'),
+  //  history page
+  history: getFilePath('03-history-page.html'),
+  //  history page
+  historyPartial: getFilePath('04-history-partial.txt'),
+  //  final empty history page
+  historyEmpty: getFilePath('05-history-empty.txt'),
   //  transaction json - case 1
   transactionJson1: getFilePath('transaction-1.json'),
   //  transaction json - case 2
@@ -52,22 +52,22 @@ function mockWebsite() {
         isLoggedIn = false;
         return false;
       })
-      .replyWithFile(200, pages.homePage)
+      .replyWithFile(200, pages.home)
       //  Logon page: submit logon form with wrong credential
       .post('/netbank/Logon/Logon.aspx')
       .replyWithFile(200, pages.logon)
       //  retrieve transaction page (logged in)
       .get('/netbank/TransactionHistory/History.aspx')
-      .replyWithFile(200, pages.transactionList)
+      .replyWithFile(200, pages.history)
       //  Post to search transaction
       .post('/netbank/TransactionHistory/History.aspx', () => isLoggedIn)
-      .replyWithFile(200, pages.transactionList)
+      .replyWithFile(200, pages.history)
       //  get more transaction
       .post('/netbank/TransactionHistory/History.aspx', () => isLoggedIn)
-      .replyWithFile(200, pages.transactionPartial)
+      .replyWithFile(200, pages.historyPartial)
       //  get more transaction (but no more transactions)
       .post('/netbank/TransactionHistory/History.aspx', () => isLoggedIn)
-      .replyWithFile(200, pages.transactionEmpty)
+      .replyWithFile(200, pages.historyEmpty)
   );
 }
 

@@ -16,13 +16,13 @@ function load(filename) {
 
 const pages = {
   //  login page
-  login: load('01-login-page.html'),
+  logon: load('01-logon-page.html'),
   //  account list page
-  homePage: load('02-home-page.html'),
-  //  transactions page
-  transactionList: load('03-transaction-page.html'),
-  //  partial transactions page
-  transactionPartial: load('04-transaction-partial.txt'),
+  home: load('02-home-page.html'),
+  //  history page
+  history: load('03-history-page.html'),
+  //  partial history page
+  historyPartial: load('04-history-partial.txt'),
   //  transaction json - case 1
   transactionJson1: load('transaction-1.json'),
   //  transaction json - case 2
@@ -46,7 +46,7 @@ describe('parser.js', () => {
     test('should parse login page title to "Log on to NetBank"', () => {
       expect.assertions(3);
       return expect(
-        parser.parseTitle({ url: links.login, headers: headersHtml, body: pages.login }).then((resp) => {
+        parser.parseTitle({ url: links.login, headers: headersHtml, body: pages.logon }).then((resp) => {
           expect(resp.url).toEqual(links.login);
           expect(resp.title).toEqual('Log on to NetBank');
           return resp;
@@ -56,7 +56,7 @@ describe('parser.js', () => {
     test('should parse home page title to "Home"', () => {
       expect.assertions(3);
       return expect(
-        parser.parseTitle({ url: links.home, headers: headersHtmlWithCharset, body: pages.homePage }).then((resp) => {
+        parser.parseTitle({ url: links.home, headers: headersHtmlWithCharset, body: pages.home }).then((resp) => {
           expect(resp.url).toEqual(links.home);
           expect(resp.title).toEqual('Home');
           return resp;
@@ -66,7 +66,7 @@ describe('parser.js', () => {
     test('should parse history page title to "Transactions"', () => {
       expect.assertions(3);
       return expect(
-        parser.parseTitle({ url: links.history, headers: headersHtml, body: pages.transactionList }).then((resp) => {
+        parser.parseTitle({ url: links.history, headers: headersHtml, body: pages.history }).then((resp) => {
           expect(resp.url).toEqual(links.history);
           expect(resp.title).toEqual('Transactions');
           return resp;
@@ -76,7 +76,7 @@ describe('parser.js', () => {
     test('should NOT parse partial page title', () => {
       expect.assertions(3);
       return expect(
-        parser.parseTitle({ url: links.login, headers: headersHtml, body: pages.transactionPartial }).then((resp) => {
+        parser.parseTitle({ url: links.login, headers: headersHtml, body: pages.historyPartial }).then((resp) => {
           expect(resp.url).toEqual(links.login);
           expect(resp.title).not.toBeDefined();
           return resp;
@@ -88,14 +88,14 @@ describe('parser.js', () => {
   describe('- serializeArray()', () => {
     test('should get serialized form from HTML page (login page)', () => {
       const form = {};
-      parser.serializeArray(cheerio.load(pages.login)('form'), { disabled: true, button: true }).forEach((item) => {
+      parser.serializeArray(cheerio.load(pages.logon)('form'), { disabled: true, button: true }).forEach((item) => {
         form[item.name] = item.value;
       });
       expect(Object.keys(form).length).toEqual(12);
     });
     test('should get serialized form from HTML page (home page)', () => {
       const form = {};
-      parser.serializeArray(cheerio.load(pages.homePage)('form'), { disabled: true, button: true }).forEach((item) => {
+      parser.serializeArray(cheerio.load(pages.home)('form'), { disabled: true, button: true }).forEach((item) => {
         form[item.name] = item.value;
       });
       expect(Object.keys(form).length).toEqual(22);
@@ -103,7 +103,7 @@ describe('parser.js', () => {
     test('should get serialized form from HTML page (history page)', () => {
       const form = {};
       parser
-        .serializeArray(cheerio.load(pages.transactionList)('form'), { disabled: true, button: true })
+        .serializeArray(cheerio.load(pages.history)('form'), { disabled: true, button: true })
         .forEach((item) => {
           form[item.name] = item.value;
         });
@@ -112,7 +112,7 @@ describe('parser.js', () => {
   });
 
   describe('- parseForm()', () => {
-    function parseForm(body = pages.transactionList) {
+    function parseForm(body = pages.history) {
       return parser.parseForm({ url: links.login, headers: headersHtml, body }).then((resp) => {
         expect(resp.url).toEqual(links.login);
         return resp;
@@ -122,7 +122,7 @@ describe('parser.js', () => {
     test('should be able parse the properties', () => {
       expect.assertions(10);
       return expect(
-        parseForm(pages.login)
+        parseForm(pages.logon)
           .then((resp) => {
             expect(resp.form).toHaveProperty('RID');
             expect(resp.form).toHaveProperty('SID');
@@ -143,7 +143,7 @@ describe('parser.js', () => {
     test('should parse the value of properties', () => {
       expect.assertions(5);
       return expect(
-        parseForm(pages.login)
+        parseForm(pages.logon)
           .then((resp) => {
             expect(resp.form.RID).toEqual('TsFbWpAhjU6Q6Ub1pWwQEQ');
             expect(resp.form.btnLogon$field).toEqual('LOG ON');
@@ -159,7 +159,7 @@ describe('parser.js', () => {
     test('should parse <input type="radio" ...>', () => {
       expect.assertions(4);
       return expect(
-        parseForm(pages.transactionList)
+        parseForm(pages.history)
           .then((resp) => {
             expect(resp.form.ctl00$BodyPlaceHolder$radioSwitchSearchType$field$).toEqual('AllTransactions');
             expect(resp.form.ctl00$BodyPlaceHolder$radioSwitchDateRange$field$).toEqual('TimePeriod');
@@ -174,7 +174,7 @@ describe('parser.js', () => {
     test('should parse <input type="checkbox" ...>', () => {
       expect.assertions(4);
       return expect(
-        parseForm(pages.transactionList)
+        parseForm(pages.history)
           .then((resp) => {
             expect(resp.form.ctl00$ContentHeaderPlaceHolder$chkTxnScrolling$field).toEqual('on');
             expect(resp.form.ctl00$ContentHeaderPlaceHolder$chkMergeCreditDebit$field).toEqual('on');
@@ -189,7 +189,7 @@ describe('parser.js', () => {
     test('should parse <select><option ...>...</select>', () => {
       expect.assertions(4);
       return expect(
-        parseForm(pages.transactionList)
+        parseForm(pages.history)
           .then((resp) => {
             expect(resp.form.ctl00$ContentHeaderPlaceHolder$ddlAccount$field).toEqual(
               '5218012345678901,MCD,True,True,True,False,True,False,True,False',
@@ -205,7 +205,7 @@ describe('parser.js', () => {
     });
     test('should raise error if there is no form in the page', () => {
       expect.assertions(1);
-      return expect(parseForm(pages.transactionPartial)).rejects.toBeDefined();
+      return expect(parseForm(pages.historyPartial)).rejects.toBeDefined();
     });
   });
 
@@ -214,7 +214,7 @@ describe('parser.js', () => {
       expect.assertions(8);
       return expect(
         parser
-          .parseViewState({ url: links.login, headers: headersHtml, body: pages.transactionPartial })
+          .parseViewState({ url: links.login, headers: headersHtml, body: pages.historyPartial })
           .then((resp) => {
             /* eslint-disable dot-notation */
             expect(Object.keys(resp.form).length).toEqual(3);
@@ -240,7 +240,7 @@ describe('parser.js', () => {
       expect.assertions(27);
       return expect(
         parser
-          .parseAccountList({ url: links.home, headers: headersHtml, body: pages.homePage })
+          .parseAccountList({ url: links.home, headers: headersHtml, body: pages.home })
           .then((resp) => {
             expect(resp.url).toEqual(links.home);
 
@@ -285,7 +285,7 @@ describe('parser.js', () => {
     test('should raise error if there is no account list in the page', () => {
       expect.assertions(1);
       return expect(
-        parser.parseAccountList({ url: links.login, headers: headersHtml, body: pages.login }),
+        parser.parseAccountList({ url: links.login, headers: headersHtml, body: pages.logon }),
       ).rejects.toBeDefined();
     });
   });
@@ -295,7 +295,7 @@ describe('parser.js', () => {
       expect.assertions(7);
       return expect(
         parser
-          .parseHomePage({ url: links.home, headers: headersHtml, body: pages.homePage })
+          .parseHomePage({ url: links.home, headers: headersHtml, body: pages.home })
           .then((resp) => {
             expect(resp.url).toEqual(links.home);
 
@@ -317,7 +317,7 @@ describe('parser.js', () => {
     test('should raise error if fail to parse the account list in the home page.', () => {
       expect.assertions(1);
       return expect(
-        parser.parseHomePage({ url: links.login, headers: headersHtml, body: pages.login }),
+        parser.parseHomePage({ url: links.login, headers: headersHtml, body: pages.logon }),
       ).rejects.toBeDefined();
     });
     test('should raise error if fail to parse the page at all', () => {
@@ -326,7 +326,7 @@ describe('parser.js', () => {
         parser.parseHomePage({
           url: links.login,
           headers: headersJson,
-          body: pages.transactionPartial,
+          body: pages.historyPartial,
         }),
       ).rejects.toBeDefined();
     });
@@ -445,7 +445,7 @@ describe('parser.js', () => {
           .parseTransactions({
             url: links.history,
             headers: headersHtml,
-            body: pages.transactionList,
+            body: pages.history,
           })
           .then((resp) => {
             expect(resp.url).toEqual(links.history);
@@ -478,7 +478,7 @@ describe('parser.js', () => {
           .parseTransactions({
             url: links.history,
             headers: headersJson,
-            body: pages.transactionPartial,
+            body: pages.historyPartial,
           })
           .then((resp) => {
             expect(resp.url).toEqual(links.history);
@@ -510,7 +510,7 @@ describe('parser.js', () => {
     });
     test('should raise error if it cannot parse the page', () => {
       expect.assertions(1);
-      return expect(parser.parseTransactions({ url: links.login, body: pages.login })).rejects.toBeDefined();
+      return expect(parser.parseTransactions({ url: links.login, body: pages.logon })).rejects.toBeDefined();
     });
   });
 
@@ -522,7 +522,7 @@ describe('parser.js', () => {
           .parseAccountListWithKeys({
             url: links.history,
             headers: headersHtml,
-            body: pages.transactionList,
+            body: pages.history,
           })
           .then((resp) => {
             expect(resp.url).toEqual(links.history);
@@ -543,7 +543,7 @@ describe('parser.js', () => {
     });
     test('should raise error if there is no account list options in the page', () => {
       expect.assertions(1);
-      return expect(parser.parseAccountListWithKeys({ url: links.login, body: pages.login })).rejects.toBeDefined();
+      return expect(parser.parseAccountListWithKeys({ url: links.login, body: pages.logon })).rejects.toBeDefined();
     });
   });
 
@@ -555,7 +555,7 @@ describe('parser.js', () => {
           .parseTransactionPage({
             url: links.history,
             headers: headersHtml,
-            body: pages.transactionList,
+            body: pages.history,
           })
           .then((resp) => {
             expect(resp.url).toEqual(links.history);
@@ -576,7 +576,7 @@ describe('parser.js', () => {
     });
     test("should raise error if it's not transaction page.", () => {
       expect.assertions(1);
-      return expect(parser.parseTransactionPage({ url: links.login, body: pages.login })).rejects.toBeDefined();
+      return expect(parser.parseTransactionPage({ url: links.login, body: pages.logon })).rejects.toBeDefined();
     });
     test("should raise error if it's a page without form.", () => {
       expect.assertions(1);
@@ -584,7 +584,7 @@ describe('parser.js', () => {
         parser.parseTransactionPage({
           url: links.history,
           headers: headersJson,
-          body: pages.transactionPartial,
+          body: pages.historyPartial,
         }),
       ).rejects.toBeDefined();
     });
