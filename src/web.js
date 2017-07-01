@@ -29,12 +29,10 @@ function writeToFile(filename, content) {
 function shorten(form) {
   const MAX_LEN = 200;
   const shortenForm = {};
-  Object.entries(form).forEach((entry) => {
-    if (entry[1].length > MAX_LEN) {
-      shortenForm[entry[0]] = `${entry[1].substring(0, MAX_LEN)}... (${entry[1].length - MAX_LEN} bytes more)`;
-    } else {
-      shortenForm[entry[0]] = entry[1];
-    }
+  Object.keys(form).forEach((key) => {
+    shortenForm[key] = form[key].length > MAX_LEN
+      ? `${form[key].substring(0, MAX_LEN)}... (${form[key].length - MAX_LEN} bytes more)`
+      : form[key];
   });
   return shortenForm;
 }
@@ -59,15 +57,22 @@ function req(params = {}) {
 
   return myRequest(myParams).then((response) => {
     if (debug.enabled) {
-      writeToFile(`${sequence}-2-response.json`, JSON.stringify({
-        request: response.request,
-        status: {
-          code: response.statusCode,
-          message: response.statusMessage,
-        },
-        headers: response.headers,
-        body: `${response.body.substring(0, 1000)}...`,
-      }, null, 2));
+      writeToFile(
+        `${sequence}-2-response.json`,
+        JSON.stringify(
+          {
+            request: response.request,
+            status: {
+              code: response.statusCode,
+              message: response.statusMessage,
+            },
+            headers: response.headers,
+            body: `${response.body.substring(0, 1000)}...`,
+          },
+          null,
+          2,
+        ),
+      );
       writeToFile(`${sequence}-3-response-body.html`, response.body);
     }
     return { url: response.request.href, headers: response.headers, body: response.body };
