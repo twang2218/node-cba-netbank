@@ -49,10 +49,10 @@ class Render {
   static transactions(transactions) {
     return Table.print(
       transactions.map(t => ({
-        Time: chalk.italic.yellow(moment(t.timestamp).format('YYYY-MM-DD HH:mm')),
-        Description: t.description,
+        Time: chalk.italic.cyan(moment(t.timestamp).format('YYYY-MM-DD HH:mm')),
+        Description: t.pending ? chalk.gray(t.description) : chalk.white(t.description),
         Amount: Render.currency(t.amount),
-        Balance: Render.currency(t.balance),
+        Balance: t.pending ? '' : Render.currency(t.balance),
       })),
     );
   }
@@ -64,13 +64,13 @@ class UI {
     this.accounts = [];
   }
 
-  start(credential) {
+  start(argv) {
     return new Promise((resolve) => {
       //  check given credential
       const questions = [];
 
       //  client number
-      if (!credential.username) {
+      if (!argv.username) {
         questions.push({
           type: 'input',
           name: 'username',
@@ -80,7 +80,7 @@ class UI {
       }
 
       //  password
-      if (!credential.password) {
+      if (!argv.password) {
         questions.push({
           type: 'password',
           name: 'password',
@@ -89,10 +89,10 @@ class UI {
         });
       }
 
-      return resolve(questions.length > 0 ? inquirer.prompt(questions) : credential);
+      return resolve(questions.length > 0 ? inquirer.prompt(questions) : argv);
     })
       .then(c => this.logon(c))
-      .then(accounts => this.chooseAccountAndShowHistory(accounts))
+      .then(() => this.chooseAccountAndShowHistory(argv.months))
       .catch((error) => {
         debug(error);
         console.log('Bye!');
@@ -124,12 +124,10 @@ class UI {
       });
   }
 
-  chooseAccountAndShowHistory() {
+  chooseAccountAndShowHistory(months) {
     return this.selectAccount()
-      .then(account =>
-        this.downloadHistoryAndShow(account, moment().subtract(1, 'months').format(argumentDateFormat)),
-      )
-      .then(() => this.chooseAccountAndShowHistory());
+      .then(account => this.downloadHistoryAndShow(account, moment().subtract(months, 'months').format(argumentDateFormat)))
+      .then(() => this.chooseAccountAndShowHistory(months));
   }
 
   selectAccount() {
@@ -155,14 +153,19 @@ class UI {
 
   downloadHistory(account, from, to) {
     console.log(`Downloading history [${from} => ${to}] ...`);
-    return netbank.getTransactionHistory(account, from, to).then(resp => resp.transactions);
+    return netbank.getTransactionHistory(account, from, to);
   }
 
   downloadHistoryAndShow(account, from, to = moment().format(argumentDateFormat)) {
-    return this.downloadHistory(account, from, to).then((transactions) => {
-      console.log(Render.transactions(transactions));
-      console.log(`Total ${transactions.length} transactions.`);
-      return transactions;
+    return this.downloadHistory(account, from, to).then((history) => {
+      const allTransactions = history.pendings
+        .map(t => Object.assign({}, t, { pending: true }))
+        .concat(history.transactions);
+      console.log(Render.transactions(allTransactions));
+      console.log(
+        `Total ${history.transactions.length} transactions and ${history.pendings.length} pending transactions.`,
+      );
+      return history;
     });
   }
 }
@@ -229,6 +232,7 @@ const myArgv = yargs
       default: 'json',
       describe: 'the output file format',
       type: 'string',
+      choices: ['json'],
     },
   },
     (argv) => {
@@ -240,15 +244,15 @@ const myArgv = yargs
         );
         if (account) {
           debug(`${Render.account(account)}`);
-          ui.downloadHistory(account, argv.from, argv.to).then((transactions) => {
-            console.log(`Retrieved ${transactions.length} transactions`);
+          ui.downloadHistory(account, argv.from, argv.to).then((history) => {
+            console.log(`Retrieved ${history.transactions.length} transactions`);
             const filename = argv.output
               .replace(tagAccountName, account.name)
               .replace(tagAccountNumber, account.number)
               .replace(tagFrom, moment(argv.from, argumentDateFormat).format(sortableDateFormat))
               .replace(tagTo, moment(argv.to, argumentDateFormat).format(sortableDateFormat));
             console.log(`filename: ${filename}`);
-            fs.writeFile(filename, JSON.stringify(transactions), (error) => {
+            fs.writeFile(filename, JSON.stringify(history.transactions), (error) => {
               if (error) {
                 throw error;
               }
@@ -263,7 +267,14 @@ const myArgv = yargs
   .command(
     'ui',
     'Interactive user interface.',
-    () => {},
+  {
+    m: {
+      alias: 'months',
+      default: 2,
+      describe: 'how many months of history should be shown',
+      type: 'number',
+    },
+  },
     (argv) => {
       debug(`UI: ${JSON.stringify(argv)}...`);
       ui.start(argv).catch(debug);

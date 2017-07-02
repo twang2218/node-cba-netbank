@@ -239,7 +239,11 @@ function getTransactionsByDate(response, account, from, to) {
 //    without getting any error message, however, keep in mind that bank
 //    usually only stored 2 years transactions history data.
 //  * `to`: Default value is today.
-function getTransactionHistory(account, from = toDateString(moment().subtract(6, 'years').valueOf()), to = toDateString(moment().valueOf())) {
+function getTransactionHistory(
+  account,
+  from = toDateString(moment().subtract(6, 'years').valueOf()),
+  to = toDateString(moment().valueOf()),
+) {
   debug(`getTransactionHistory(account: ${account.name} [${account.number}] => ${account.available})`);
   //  retrieve post form and key for the given account
   return web.get(getUrl(account.link)).then(parser.parseTransactionPage).then(refreshBase).then((resp) => {
@@ -251,12 +255,18 @@ function getTransactionHistory(account, from = toDateString(moment().subtract(6,
     //  if the transaction section is lazy loading, we need do a panel update
     //  first, before the real search.
     if (!resp.form.ctl00$BodyPlaceHolder$radioSwitchSearchType$field$) {
-      return lazyLoading(resp, acc).then(r => getTransactionsByDate(r, acc, from, to));
+      return lazyLoading(resp, acc)
+        .then(r => getTransactionsByDate(r, acc, from, to))
+        //  attach pendings
+        .then(r => Object.assign({}, r, { pendings: resp.pendings }));
     }
-    return getTransactionsByDate(resp, acc, from, to).then((r) => {
-      debug(`getTransactionHistory(): Total received ${r.transactions.length} transactions.`);
-      return r;
-    });
+    return getTransactionsByDate(resp, acc, from, to)
+      //  attach pending
+      .then(r => Object.assign({}, r, { pendings: resp.pendings }))
+      .then((r) => {
+        debug(`getTransactionHistory(): Total received ${r.transactions.length} transactions.`);
+        return r;
+      });
   });
 }
 
