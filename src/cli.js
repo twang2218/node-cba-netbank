@@ -21,13 +21,16 @@ const tagAccountName = '<name>';
 const tagAccountNumber = '<number>';
 const tagFrom = '<from>';
 const tagTo = '<to>';
-const outputFilenameTemplate = `[${tagAccountName}](${tagAccountNumber}) [${tagFrom} to ${tagTo}].json`;
-const sortableDateFormat = 'YYYY-MM-DD';
-const argumentDateFormat = 'DD/MM/YYYY';
+const tagExt = '<ext>';
+const outputFilenameTemplate = `[${tagAccountName}](${tagAccountNumber}) [${tagFrom} to ${tagTo}].${tagExt}`;
+const formatSortable = 'YYYY-MM-DD';
+const formatAus = 'DD/MM/YYYY';
+const formatQifQuickenAUS = 'DD/MM/YY';
+const formatQifQuickenUS = 'MM/DD/YY';
 
 class Render {
   static currency(amount) {
-    return amount >= 0 ? chalk.green.bold(`$${amount}`) : chalk.red.bold(`$${amount}`);
+    return amount >= 0 ? chalk.green.bold(`$${amount.toFixed(2)}`) : chalk.red.bold(`$${amount.toFixed(2)}`);
   }
   static account(account) {
     return (
@@ -55,6 +58,48 @@ class Render {
         Balance: t.pending ? '' : Render.currency(t.balance),
       })),
     );
+  }
+  static csvAmount(n) {
+    return n > 0 ? `+${n.toFixed(2)}` : `${n.toFixed(2)}`;
+  }
+  static csvTransaction(t) {
+    return (
+      `${moment(t.timestamp).format(formatAus)}` +
+      `,"${Render.csvAmount(t.amount)}"` +
+      `,"${t.description}"` +
+      `,"${Render.csvAmount(t.balance)}"\r\n`
+    );
+  }
+  static csvTransactions(transactions) {
+    return transactions.map(Render.csvTransaction).join('');
+  }
+  static qifMyobTransaction(t) {
+    return (
+      `D${moment(t.timestamp).format(formatAus)}\r\n` +
+      `T${t.amount.toFixed(2)}\r\n` +
+      `P${t.description}\r\n` +
+      `L${t.amount >= 0 ? 'DEP' : 'DEBIT'}\r\n` +
+      '^\r\n'
+    );
+  }
+  static qifQuicken2004Transaction(t, format) {
+    return `D${moment(t.timestamp).format(format)}\r\nT${t.amount.toFixed(2)}\r\nP${t.description}\r\n^\r\n`;
+  }
+  static qifTransactions(transactions, type) {
+    let render;
+    switch (type) {
+      case 'aus':
+        render = t => Render.qifQuicken2004Transaction(t, formatQifQuickenAUS);
+        break;
+      case 'us':
+        render = t => Render.qifQuicken2004Transaction(t, formatQifQuickenUS);
+        break;
+      default:
+      case 'myob':
+        render = Render.qifMyobTransaction;
+        break;
+    }
+    return `!Type:Bank\r\n${transactions.map(render).join('')}`;
   }
 }
 
@@ -126,7 +171,7 @@ class UI {
 
   chooseAccountAndShowHistory(months) {
     return this.selectAccount()
-      .then(account => this.downloadHistoryAndShow(account, moment().subtract(months, 'months').format(argumentDateFormat)))
+      .then(account => this.downloadHistoryAndShow(account, moment().subtract(months, 'months').format(formatAus)))
       .then(() => this.chooseAccountAndShowHistory(months));
   }
 
@@ -156,7 +201,7 @@ class UI {
     return netbank.getTransactionHistory(account, from, to);
   }
 
-  downloadHistoryAndShow(account, from, to = moment().format(argumentDateFormat)) {
+  downloadHistoryAndShow(account, from, to = moment().format(formatAus)) {
     return this.downloadHistory(account, from, to).then((history) => {
       const allTransactions = history.pendings
         .map(t => Object.assign({}, t, { pending: true }))
@@ -212,13 +257,13 @@ const myArgv = yargs
     },
     f: {
       alias: 'from',
-      default: moment().subtract(3, 'months').format(argumentDateFormat),
+      default: moment().subtract(3, 'months').format(formatAus),
       describe: 'history range from date',
       type: 'string',
     },
     t: {
       alias: 'to',
-      default: moment().format(argumentDateFormat),
+      default: moment().format(formatAus),
       describe: 'history range to date',
       type: 'string',
     },
@@ -232,7 +277,7 @@ const myArgv = yargs
       default: 'json',
       describe: 'the output file format',
       type: 'string',
-      choices: ['json'],
+      choices: ['json', 'csv', 'qif', 'aus.qif', 'us.qif'],
     },
   },
     (argv) => {
@@ -249,10 +294,30 @@ const myArgv = yargs
             const filename = argv.output
               .replace(tagAccountName, account.name)
               .replace(tagAccountNumber, account.number)
-              .replace(tagFrom, moment(argv.from, argumentDateFormat).format(sortableDateFormat))
-              .replace(tagTo, moment(argv.to, argumentDateFormat).format(sortableDateFormat));
+              .replace(tagFrom, moment(argv.from, formatAus).format(formatSortable))
+              .replace(tagTo, moment(argv.to, formatAus).format(formatSortable))
+              .replace(tagExt, argv.format);
             console.log(`filename: ${filename}`);
-            fs.writeFile(filename, JSON.stringify(history.transactions), (error) => {
+            let content;
+            switch (argv.format) {
+              default:
+              case 'json':
+                content = JSON.stringify(history.transactions);
+                break;
+              case 'csv':
+                content = Render.csvTransactions(history.transactions);
+                break;
+              case 'qif':
+                content = Render.qifTransactions(history.transactions, 'myob');
+                break;
+              case 'aus.qif':
+                content = Render.qifTransactions(history.transactions, 'aus');
+                break;
+              case 'us.qif':
+                content = Render.qifTransactions(history.transactions, 'us');
+                break;
+            }
+            fs.writeFile(filename, content, (error) => {
               if (error) {
                 throw error;
               }

@@ -1,5 +1,4 @@
-node-cba-netbank
-================
+# node-cba-netbank
 
 [![NPM version][npm-version-image]][npm-url]
 [![MIT License][license-image]][license-url]
@@ -12,15 +11,105 @@ node-cba-netbank
 Unofficial The Commonwealth Bank of Australia NetBank API wrap for
 Node.js
 
-Install
--------
+
+# Usage
+
+## CLI
+
+### Install
+
+```bash
+npm install node-cba-netbank -g
+```
+
+### Usage
+
+```bash
+$ cba-netbank --help
+CBA Netbank CLI
+Usage: cba-netbank <command> [args]
+
+Commands:
+  list      List accounts
+  download  Download transactions history for given account
+  ui        Interactive user interface.
+
+Options:
+  -u, --username  client number [string] [required] [default: $NETBANK_USERNAME]
+  -p, --password  password      [string] [required] [default: $NETBANK_PASSWORD]
+  --help          Show help                                            [boolean]
+```
+
+There are 3 commands, `list`, `download` and `ui`.
+
+Username and password can be given via the arguments, `--username` and `--password`, as well as the environment variables, `NETBANK_USERNAME` and `NETBANK_PASSWORD`.
+
+You can use `list` command to see the account list, and use `download` command to download the transaction history in given format, there are more arguments for `download` command:
+
+```bash
+$ cba-netbank download --help
+cba-netbank download
+
+Options:
+  -u, --username  client number [string] [required] [default: $NETBANK_USERNAME]
+  -p, --password  password      [string] [required] [default: $NETBANK_PASSWORD]
+  --help          Show help                                            [boolean]
+  -a, --account   account name or number                     [string] [required]
+  -f, --from      history range from date       [string] [default: "03/04/2017"]
+  -t, --to        history range to date         [string] [default: "03/07/2017"]
+  -o, --output    output file name
+                 [string] [default: "[<name>](<number>) [<from> to <to>].<ext>"]
+  --format        the output file format
+         [string] [choices: "json", "csv", "qif", "aus.qif", "us.qif"] [default:
+                                                                         "json"]
+```
+
+You can use `-a` to specify which account you want to download the history from, and the value can be part of the name or account number. For example, if the account name you want to specified is `Smart Access`, then you can use `-a smart` to save some time.
+
+About the QIF format, `qif` is for `QIF(MYOB, MSMoney, or Quicken 2005 or later)`, `aus.qif` is for `QIF (Quicken AUS 2004 or earlier)`, and `us.qif` is for `QIF (Quicken US 2004 or earlier)`.
+
+### Interactive UI
+
+This is an UI you can just use `<UP>` and `<DOWN>` key to list accounts and its recent transactions.
+
+```bash
+$ cba-netbank ui
+Logon as account 1234567 ...
+? Which account?
+❯ Smart Access 	(062001 12340001)	 Balance: $987.65 	 Available Funds: $907.65
+  NetBank Saver 	(062002 12340012)	 Balance: $4321.01 	 Available Funds: $4021.00
+  GoalSaver 	(062003 12340013)	 Balance: $32109.87 	 Available Funds: $32109.87
+  Complete Access 	(062004 12340014)	 Balance: $1234.56 	 Available Funds: $1023.45
+  MasterCard Platinum 	( 5520123456789012)	 Balance: $-1234.56 	 Available Funds: $12345.67
+  <Quit>
+```
+
+Use `<UP>` and `<DOWN>` key to select an account then press `<ENTER>`, the recent transaction history will be downloaded and shown below.
+
+```bash
+Downloading history [03/05/2017 => 03/07/2017] ...
+Time              Description                                                                     Amount    Balance
+----------------  ------------------------------------------------------------------------------  --------  --------
+2017-07-01 00:00  PENDING - HURSTSVILLE TONGLI S   HURSTVILLE , 0701; LAST 4 CARD DIGITS 4341     $-3.09
+2017-07-01 00:00  PENDING - DAMS APPLE AT THE STAT HURSTVILLE , 0701; LAST 4 CARD DIGITS 4341     $-12.37
+...
+2017-07-01 04:39  THE NAKED DUCK DARLING SYDNEY NS AUS; Card xx4341; Value Date: 28/06/2017       $-13.50   $909.66
+2017-07-01 04:39  TOPSHOP TOPMAN SYDNE SYDNEY  AUS; Card xx4341; Value Date: 30/06/2017           $-80.00   $927.16
+...
+2017-06-12 16:13  Cardless Cash for collection                                                    $-40.00   $1111.83
+
+Total 69 transactions and 12 pending transactions.
+```
+
+To quit the CLI, just select `<Quit>` then press `<Enter>`.
+
+## Library
+
+### Install
 
 ```bash
 npm install node-cba-netbank --save
 ```
-
-Usage
------
 
 ### List Accounts
 
@@ -91,8 +180,7 @@ For each transaction object, there are following properties:
 * ```trancode```: It's a category code for the transaction, such as ATM, EFTPOS, cash out might be different code;
 * ```receiptnumber```: The receipt number for the transaction. However, I cannot found it on my real paper receipt, and the field might be missing for some accounts, such as credit card account;
 
-Testing
--------
+### Testing
 
 Offline test can be done by simply run `yarn test`.
 
