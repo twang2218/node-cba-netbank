@@ -109,7 +109,8 @@ function parseTransaction(json) {
     return {
       timestamp: t.valueOf(),
       date: t.format(),
-      description: json.Description.Text || '',
+      //  replace newline with '; '
+      description: json.Description.Text.replace(/\n/g, '; '),
       amount: parseCurrencyText(json.Amount.Text),
       balance: parseCurrencyText(json.Balance.Text),
       trancode: json.TranCode.Text || '',

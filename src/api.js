@@ -262,7 +262,6 @@ function getTransactionHistory(account, from = toDateString(moment().subtract(6,
 
 //  Exports
 module.exports = {
-  toDateString,
   logon,
   getTransactionHistory,
 };
