@@ -1,9 +1,10 @@
 // Dependencies
+const debug = require('debug')('node-cba-netbank');
 const moment = require('./moment');
 const WebClient = require('./web');
 const parser = require('./parser');
 const Url = require('url');
-const debug = require('debug')('node-cba-netbank');
+const uniq = require('lodash/uniq');
 
 // Constant
 const NETBANK_HOST = 'https://www.my.commbank.com.au';
@@ -13,19 +14,9 @@ const PATH = {
 };
 
 //  Utilities
-const isSameTransaction = (left, right) =>
-  //  case 1. Have same receipt number, of course, it's not empty
-  (left.receiptnumber && left.receiptnumber === right.receiptnumber) ||
-  //  case 2. Same time, same description and same amount
-  (left.timestamp === right.timestamp && left.description === right.description && left.amount === right.amount);
-
-//  concat 2 transactionList without any duplications.
-function concat(a, b) {
-  return a.concat(b.filter(vb => !a.find(va => isSameTransaction(va, vb))));
-}
+const concat = (a, b) => uniq(a.concat(b));
 
 //  API
-
 class API {
   constructor(credentials) {
     this.credentials = credentials;
@@ -85,10 +76,9 @@ class API {
         //  if the transaction section is lazy loading, we need do a panel update
         //  first, before the real search.
         if (!resp.form.ctl00$BodyPlaceHolder$radioSwitchSearchType$field$) {
-          return (
-            this.lazyLoading(resp, acc).then(r => this.getTransactionsByDate(r, acc, from, to))//  attach pendings
-            .then(r => Object.assign({}, r, { pendings: resp.pendings }))
-          );
+          return this.lazyLoading(resp, acc)
+            .then(r => this.getTransactionsByDate(r, acc, from, to)) //  attach pendings
+            .then(r => Object.assign({}, r, { pendings: resp.pendings }));
         }
         return (
           this.getTransactionsByDate(resp, acc, from, to)
