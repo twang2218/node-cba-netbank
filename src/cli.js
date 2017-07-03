@@ -138,7 +138,8 @@ class Render {
         DTPOSTED: moment(t.timestamp).format('YYYYMMDD'),
         DTUSER: moment(t.timestamp).format('YYYYMMDD'),
         TRNAMT: t.amount.toFixed(2),
-        FITID: t.receiptnumber,
+        //  use timestamp as FITID if necessary to fix the OFX missing FITID issue.
+        FITID: t.receiptnumber || t.timestamp,
         MEMO: t.description.replace(';', ''),
       })),
     };
