@@ -10,6 +10,7 @@ const debug = require('debug')('node-cba-netbank');
 const fs = require('fs');
 const inquirer = require('inquirer');
 const moment = require('moment-timezone');
+const ofx = require('ofx');
 const Table = require('easy-table');
 const yargs = require('yargs');
 
@@ -100,6 +101,103 @@ class Render {
         break;
     }
     return `!Type:Bank\r\n${transactions.map(render).join('')}`;
+  }
+  static ofxTransactions(account, from, to, transactions) {
+    const current = moment().format('YYYYMMDDHHmmss');
+    const header = {
+      OFXHEADER: '100',
+      DATA: 'OFXSGML',
+      VERSION: '102',
+      SECURITY: 'NONE',
+      ENCODING: 'USASCII',
+      CHARSET: '1252',
+      COMPRESSION: 'NONE',
+      OLDFILEUID: 'NONE',
+      NEWFILEUID: 'NONE',
+    };
+
+    const body = {
+      SIGNONMSGSRSV1: {
+        SONRS: {
+          STATUS: {
+            CODE: 0,
+            SEVERITY: 'INFO',
+          },
+          DTSERVER: current,
+          LANGUAGE: 'ENG',
+        },
+      },
+    };
+
+    //  BANKTRANLIST
+    const translist = {
+      DTSTART: moment(from, formatAus).format('YYYYMMDD000000'),
+      DTEND: moment(to, formatAus).format('YYYYMMDD000000'),
+      STMTTRN: transactions.map(t => ({
+        TRNTYPE: t.amount > 0 ? 'CREDIT' : 'DEBIT',
+        DTPOSTED: moment(t.timestamp).format('YYYYMMDD'),
+        DTUSER: moment(t.timestamp).format('YYYYMMDD'),
+        TRNAMT: t.amount.toFixed(2),
+        FITID: t.receiptnumber,
+        MEMO: t.description.replace(';', ''),
+      })),
+    };
+
+    if (account.type === 'DDA') {
+      body.BANKMSGSRSV1 = {
+        STMTTRNRS: {
+          TRNUID: 1,
+          STATUS: {
+            CODE: 0,
+            SEVERITY: 'INFO',
+          },
+          STMTRS: {
+            CURDEF: 'AUD',
+            BANKACCTFROM: {
+              BANKID: account.bsb,
+              ACCTID: account.account,
+              ACCTTYPE: 'SAVINGS',
+            },
+            BANKTRANLIST: translist,
+            LEDGERBAL: {
+              BALAMT: account.balance,
+              DTASOF: current,
+            },
+            AVAILBAL: {
+              BALAMT: account.available,
+              DTASOF: current,
+            },
+          },
+        },
+      };
+    } else {
+      body.CREDITCARDMSGSRSV1 = {
+        CCSTMTTRNRS: {
+          TRNUID: 1,
+          STATUS: {
+            CODE: 0,
+            SEVERITY: 'INFO',
+          },
+          CCSTMTRS: {
+            CURDEF: 'AUD',
+            CCACCTFROM: {
+              ACCTID: account.number,
+            },
+            BANKTRANLIST: translist,
+            LEDGERBAL: {
+              BALAMT: account.balance,
+              DTASOF: current,
+            },
+            AVAILBAL: {
+              BALAMT: account.available,
+              DTASOF: current,
+            },
+          },
+        },
+      };
+    }
+
+    return ofx.serialize(header, body);
   }
 }
 
@@ -277,7 +375,7 @@ const myArgv = yargs
       default: 'json',
       describe: 'the output file format',
       type: 'string',
-      choices: ['json', 'csv', 'qif', 'aus.qif', 'us.qif'],
+      choices: ['json', 'csv', 'qif', 'aus.qif', 'us.qif', 'ofx'],
     },
   },
     (argv) => {
@@ -315,6 +413,9 @@ const myArgv = yargs
                 break;
               case 'us.qif':
                 content = Render.qifTransactions(history.transactions, 'us');
+                break;
+              case 'ofx':
+                content = Render.ofxTransactions(account, argv.from, argv.to, history.transactions);
                 break;
             }
             fs.writeFile(filename, content, (error) => {
