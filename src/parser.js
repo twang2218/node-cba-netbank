@@ -1,11 +1,10 @@
 // Dependencies
 const Promise = require('bluebird');
 const cheerio = require('cheerio');
-const moment = require('moment-timezone');
+const moment = require('./moment');
 const debug = require('debug')('node-cba-netbank');
 
-moment.tz.setDefault('Australia/Sydney');
-
+//  Constants
 const submittableSelector = 'input,select,textarea,keygen';
 const rCRLF = /\r?\n/g;
 

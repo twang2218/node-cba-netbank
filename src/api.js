@@ -1,5 +1,5 @@
 // Dependencies
-const moment = require('moment-timezone');
+const moment = require('./moment');
 const web = require('./web');
 const parser = require('./parser');
 const Url = require('url');
