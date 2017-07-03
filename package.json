@@ -1,6 +1,6 @@
 {
   "name": "node-cba-netbank",
-  "version": "0.7.0",
+  "version": "0.7.1",
   "description": "Unofficial Commonwealth Bank Australia Netbank API Wrapper for Node.js",
   "author": "Tao Wang <twang2218@gmail.com>",
   "license": "Apache-2.0",
