@@ -2,7 +2,7 @@ const moment = require('moment-timezone');
 
 moment.tz.setDefault('Australia/Sydney');
 
-moment.format = {
+moment.formats = {
   default: 'DD/MM/YYYY',
   aus: 'DD/MM/YY',
   us: 'MM/DD/YY',

@@ -61,13 +61,13 @@ const myArgv = yargs
     },
     f: {
       alias: 'from',
-      default: moment().subtract(3, 'months').format(moment.format.default),
+      default: moment().subtract(3, 'months').format(moment.formats.default),
       describe: 'history range from date',
       type: 'string',
     },
     t: {
       alias: 'to',
-      default: moment().format(moment.format.default),
+      default: moment().format(moment.formats.default),
       describe: 'history range to date',
       type: 'string',
     },
@@ -98,8 +98,8 @@ const myArgv = yargs
             const filename = argv.output
               .replace(tagAccountName, account.name)
               .replace(tagAccountNumber, account.number)
-              .replace(tagFrom, moment(argv.from, moment.format.default).format(moment.format.sortable))
-              .replace(tagTo, moment(argv.to, moment.format.default).format(moment.format.sortable))
+              .replace(tagFrom, moment(argv.from, moment.formats.default).format(moment.formats.sortable))
+              .replace(tagTo, moment(argv.to, moment.formats.default).format(moment.formats.sortable))
               .replace(tagExt, argv.format);
             console.log(`filename: ${filename}`);
             let content;

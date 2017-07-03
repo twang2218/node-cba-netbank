@@ -1,7 +1,7 @@
 /* eslint-disable no-undef */
 
 // Dependencies
-const web = require('../src/web');
+const WebClient = require('../src/web');
 const nock = require('nock');
 
 //  create a simple parser to use
@@ -24,7 +24,10 @@ describe('web.js', () => {
     test('should get a page, run parser, call back', (done) => {
       const commbank = nock('https://www.my.commbank.com.au').get('/').reply(200, 'Hello from Google!');
 
-      web.get('https://www.my.commbank.com.au/').then(parser).then(processor).then(() => {
+      //  Disable newline-per-chained-call rule as it's an open issue for now.
+      //  Ref: https://github.com/prettier/prettier/issues/1282
+      /*  eslint-disable newline-per-chained-call */
+      new WebClient().get('https://www.my.commbank.com.au/').then(parser).then(processor).then(() => {
         commbank.done();
         done();
       });
@@ -33,7 +36,7 @@ describe('web.js', () => {
     test('should raise error if request failed.', (done) => {
       const commbank = nock('https://www.my.commbank.com.au').get('/').replyWithError('something awful happened');
 
-      web.get('https://www.my.commbank.com.au/').then(parser).then(processor).catch((error) => {
+      new WebClient().get('https://www.my.commbank.com.au/').then(parser).then(processor).catch((error) => {
         expect(error).not.toBeNull();
         commbank.done();
         done();
@@ -54,7 +57,7 @@ describe('web.js', () => {
         })
         .reply(200, 'Hello from Google!');
 
-      web
+      new WebClient()
         .post({
           url: 'https://www.my.commbank.com.au/users',
           form: {
@@ -79,7 +82,7 @@ describe('web.js', () => {
         })
         .replyWithError('something awful happened');
 
-      web
+      new WebClient()
         .post({
           url: 'https://www.my.commbank.com.au/users',
           form: {
@@ -97,10 +100,10 @@ describe('web.js', () => {
     });
   });
 
-  describe('- real world access', () => {
+  describe('- real world test', () => {
     beforeEach(() => nock.enableNetConnect());
     test('www.google.com.au', (done) => {
-      web.get('https://www.google.com.au').then((resp) => {
+      new WebClient().get('https://www.google.com.au').then((resp) => {
         expect(resp.body.indexOf('<title>Google</title>')).toBeGreaterThan(-1);
         done();
       });

@@ -3,7 +3,7 @@
 // Dependencies
 const nock = require('nock');
 const path = require('path');
-const api = require('../src/api');
+const API = require('../src/api');
 const debug = require('debug')('node-cba-netbank');
 
 // jasmine.DEFAULT_TIMEOUT_INTERVAL = 600000;
@@ -90,8 +90,8 @@ describe('api.js', () => {
         () => {
           expect.assertions(3);
           return expect(
-            api
-              .logon(credential)
+            new API(credential)
+              .logon()
               .then((resp) => {
                 expect(resp.accounts).toBeDefined();
                 expect(resp.accounts.length).toBeGreaterThan(1);
@@ -109,7 +109,7 @@ describe('api.js', () => {
         'should failed if credential is not working',
         () => {
           expect.assertions(1);
-          return expect(api.logon(credentialWrong)).rejects.toBeDefined();
+          return expect(new API(credentialWrong).logon()).rejects.toBeDefined();
         },
         10000,
       );
@@ -120,9 +120,10 @@ describe('api.js', () => {
         'should retrieve transactions for given account',
         () => {
           expect.assertions(5);
+          const api = new API(credential);
           return expect(
             api
-              .logon(credential)
+              .logon()
               .then((resp) => {
                 expect(resp.accounts).toBeDefined();
                 expect(resp.accounts.length).toBeGreaterThan(0);
@@ -158,8 +159,8 @@ describe('api.js', () => {
       it('should be able to logon with correct credential', () => {
         expect.assertions(3);
         return expect(
-          api
-            .logon(credential)
+          new API(credential)
+            .logon()
             .then((resp) => {
               expect(resp.accounts).toBeDefined();
               expect(resp.accounts.length).toBeGreaterThan(1);
@@ -173,7 +174,7 @@ describe('api.js', () => {
       });
       it('should failed if credential is not working', () => {
         expect.assertions(1);
-        return expect(api.logon(credentialWrong)).rejects.toBeDefined();
+        return expect(new API(credentialWrong).logon()).rejects.toBeDefined();
       });
     });
 
@@ -189,9 +190,10 @@ describe('api.js', () => {
 
       it('should retrieve transactions for given account', () => {
         expect.assertions(5);
+        const api = new API(credential);
         return expect(
           api
-            .logon(credential)
+            .logon()
             .then((resp) => {
               expect(resp.accounts).toBeDefined();
               expect(resp.accounts.length).toEqual(4);
@@ -210,7 +212,7 @@ describe('api.js', () => {
       });
       it('should failed if error happend during the transactions page parsing', () => {
         expect.assertions(1);
-        return expect(api.logon(credentialWrong)).rejects.toBeDefined();
+        return expect(new API(credentialWrong).logon()).rejects.toBeDefined();
       });
     });
   }

@@ -1,7 +1,9 @@
 // Dependencies
-const request = require('request-promise');
-const fs = require('fs');
 const debug = require('debug')('node-cba-netbank');
+const fs = require('mz/fs');
+const isString = require('lodash/isString');
+const request = require('request-promise');
+const truncate = require('lodash/truncate');
 
 // Initialisation
 const DEFAULT_OPTION = {
@@ -15,30 +17,15 @@ const DEFAULT_OPTION = {
 };
 
 // Utilities
-const myRequest = request.defaults(DEFAULT_OPTION);
-const isString = obj => typeof obj === 'string' || obj instanceof String;
-
-function writeToFile(filename, content) {
-  fs.writeFile(`log/${filename}`, content, (err) => {
-    if (err) {
-      debug(err);
-    }
-    debug(`Wrote to file => 'log/${filename}'.`);
-  });
-}
-
 function shorten(form) {
-  const MAX_LEN = 200;
   const shortenForm = {};
   Object.keys(form).forEach((key) => {
-    shortenForm[key] = form[key].length > MAX_LEN
-      ? `${form[key].substring(0, MAX_LEN)}... (${form[key].length - MAX_LEN} bytes more)`
-      : form[key];
+    shortenForm[key] = truncate(form[key], { length: 200 });
   });
   return shortenForm;
 }
 
-function req(params = {}) {
+function doRequest(req, params = {}) {
   const sequence = Date.now();
   const { partial } = params;
   const headers = Object.assign({}, params.headers);
@@ -53,13 +40,13 @@ function req(params = {}) {
     if (myParams.method === 'POST') {
       debug(`form => ${JSON.stringify(shorten(myParams.form))}`);
     }
-    writeToFile(`${sequence}-1-request.json`, JSON.stringify(shorten(myParams), null, 2));
+    fs.writeFile(`log/${sequence}-1-request.json`, JSON.stringify(shorten(myParams), null, 2));
   }
 
-  return myRequest(myParams).then((response) => {
+  return req(myParams).then((response) => {
     if (debug.enabled) {
-      writeToFile(
-        `${sequence}-2-response.json`,
+      fs.writeFile(
+        `log/${sequence}-2-response.json`,
         JSON.stringify(
           {
             request: response.request,
@@ -74,14 +61,23 @@ function req(params = {}) {
           2,
         ),
       );
-      writeToFile(`${sequence}-3-response-body.html`, response.body);
+      fs.writeFile(`log/${sequence}-3-response-body.html`, response.body);
     }
     return { url: response.request.href, headers: response.headers, body: response.body };
   });
 }
 
+class WebClient {
+  constructor() {
+    this.request = request.defaults(DEFAULT_OPTION);
+  }
+  get(params) {
+    return isString(params) ? doRequest(this.request, { url: params }) : doRequest(this.request, params);
+  }
+  post(params) {
+    return doRequest(this.request, Object.assign({ method: 'POST' }, params));
+  }
+}
+
 //  Export
-module.exports = {
-  get: params => (isString(params) ? req({ url: params }) : req(params)),
-  post: params => req(Object.assign({ method: 'POST' }, params)),
-};
+module.exports = WebClient;

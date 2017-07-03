@@ -7,7 +7,7 @@ const moment = require('./moment');
 const csvAmount = n => (n > 0 ? `+${n.toFixed(2)}` : `${n.toFixed(2)}`);
 
 const csvTransaction = t =>
-  `${moment(t.timestamp).format(moment.format.default)}` +
+  `${moment(t.timestamp).format(moment.formats.default)}` +
   `,"${csvAmount(t.amount)}"` +
   `,"${t.description}"` +
   `,"${csvAmount(t.balance)}"\r\n`;
@@ -16,13 +16,13 @@ const qifTransaction = (transaction, type = 'default') => {
   let format;
   switch (type) {
     case 'aus':
-      format = moment.format.aus;
+      format = moment.formats.aus;
       break;
     case 'us':
-      format = moment.format.us;
+      format = moment.formats.us;
       break;
     default:
-      format = moment.format.default;
+      format = moment.formats.default;
       break;
   }
   const lline = type === 'default' ? `L${transaction.amount >= 0 ? 'DEP' : 'DEBIT'}\r\n` : '';
@@ -66,8 +66,8 @@ const ofx = (transactions, account, from, to) => {
 
   //  BANKTRANLIST
   const translist = {
-    DTSTART: moment(from, moment.format.default).format('YYYYMMDD000000'),
-    DTEND: moment(to, moment.format.default).format('YYYYMMDD000000'),
+    DTSTART: moment(from, moment.formats.default).format('YYYYMMDD000000'),
+    DTEND: moment(to, moment.formats.default).format('YYYYMMDD000000'),
     STMTTRN: transactions.map(t => ({
       TRNTYPE: t.amount > 0 ? 'CREDIT' : 'DEBIT',
       DTPOSTED: moment(t.timestamp).format('YYYYMMDD'),

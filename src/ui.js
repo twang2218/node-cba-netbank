@@ -1,6 +1,6 @@
 // Dependencies
 const moment = require('./moment');
-const netbank = require('./api');
+const API = require('./api');
 const Render = require('./render');
 
 const chalk = require('chalk');
@@ -10,7 +10,6 @@ const inquirer = require('inquirer');
 //  Constant
 const msgQuit = 'quit';
 const tagQuit = chalk.red('<Quit>');
-const formatAus = 'DD/MM/YYYY';
 
 /* eslint-disable class-methods-use-this */
 class UI {
@@ -54,8 +53,9 @@ class UI {
   }
 
   logon(credential) {
+    this.api = new API(credential);
     console.log(`Logon as account ${credential.username} ...`);
-    return netbank
+    return this.api
       .logon(credential)
       .catch(() =>
         inquirer
@@ -80,7 +80,7 @@ class UI {
 
   chooseAccountAndShowHistory(months) {
     return this.selectAccount()
-      .then(account => this.downloadHistoryAndShow(account, moment().subtract(months, 'months').format(formatAus)))
+      .then(account => this.downloadHistoryAndShow(account, moment().subtract(months, 'months').format(moment.formats.default)))
       .then(() => this.chooseAccountAndShowHistory(months));
   }
 
@@ -107,10 +107,10 @@ class UI {
 
   downloadHistory(account, from, to) {
     console.log(`Downloading history [${from} => ${to}] ...`);
-    return netbank.getTransactionHistory(account, from, to);
+    return this.api.getTransactionHistory(account, from, to);
   }
 
-  downloadHistoryAndShow(account, from, to = moment().format(formatAus)) {
+  downloadHistoryAndShow(account, from, to = moment().format(moment.formats.default)) {
     return this.downloadHistory(account, from, to).then((history) => {
       const allTransactions = history.pendings
         .map(t => Object.assign({}, t, { pending: true }))

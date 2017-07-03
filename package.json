@@ -20,7 +20,9 @@
     "debug": "^2.6.8",
     "easy-table": "^1.1.0",
     "inquirer": "^3.1.1",
+    "lodash": "^4.17.4",
     "moment-timezone": "^0.5.13",
+    "mz": "^2.6.0",
     "ofx": "^0.4.0",
     "request": "^2.81.0",
     "request-promise": "^4.2.1",
@@ -40,7 +42,8 @@
     "eslint-plugin-import": "^2.3.0",
     "jest": "^20.0.4",
     "jest-cli": "^20.0.4",
-    "nock": "^9.0.13"
+    "nock": "^9.0.13",
+    "strip-ansi": "^4.0.0"
   },
   "scripts": {
     "start": "node dist/cli.js",
