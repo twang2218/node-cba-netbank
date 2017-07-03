@@ -50,10 +50,10 @@ cscope.po.out
 
 ### Project Specified ###
 
-test/auth.json*
 .coveralls.yml*
 dist/
 log/
 docs/
 .vscode/
 .yarnclean
+.credential

@@ -2,7 +2,6 @@
 
 // Dependencies
 const nock = require('nock');
-const fs = require('fs');
 const path = require('path');
 const api = require('../src/api');
 const debug = require('debug')('node-cba-netbank');
@@ -73,15 +72,14 @@ function mockWebsite() {
 
 describe('api.js', () => {
   //  start the real world testing if there is a credential file.
-  if (fs.existsSync(`${__dirname}/auth.json`)) {
+  if (process.env.NETBANK_USERNAME && process.env.NETBANK_PASSWORD) {
     // this.timeout(20000);
 
     beforeAll(() => {
       /* eslint-disable global-require,import/no-unresolved */
       //  Load test credential
-      const auth = require('./auth');
-      credential.username = auth.username;
-      credential.password = auth.password;
+      credential.username = process.env.NETBANK_USERNAME;
+      credential.password = process.env.NETBANK_PASSWORD;
       //  Real world testing
       nock.enableNetConnect();
     });

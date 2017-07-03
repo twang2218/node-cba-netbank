@@ -184,14 +184,7 @@ For each transaction object, there are following properties:
 
 Offline test can be done by simply run `yarn test`.
 
-To enable real world testing, please put a JSON file, `auth.json` under `./test/` directory, and put content of real credential information in it:
-
-```js
-{
-  "username": "76543210",
-  "password": "YOUR_PASSWORD"
-}
-```
+To enable real world testing, please set environment variables `NETBANK_USERNAME` and `NETBANK_PASSWORD` to your client number and password for online banking.
 
 Then run command:
 
@@ -199,7 +192,9 @@ Then run command:
 yarn test
 ```
 
-The test will try to login and get transactions from the first account, and if it will fail if the retrieved transactions number is less than 1000. It's ok if you don't have that much transactions in the account. The purpose of checking whether it get more than 1000 transactions is to check whether it can overcome the maximum transactions limits.
+to have more details, you can run `yarn test-debug` for more verbose output.
+
+The test will try to login and get transactions from the first account, and if it will fail if the retrieved transactions number is less than 400. It's ok if you don't have that much transactions in the account. The purpose of checking whether it get more than 400 transactions is to check whether it can overcome the maximum transactions limits.
 
 
 [license-image]: http://img.shields.io/badge/license-Apache%202.0-blue.svg?style=flat

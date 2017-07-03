@@ -1,1 +1,7 @@
+.coveralls.yml*
 src/
+log/
+docs/
+.vscode/
+.yarnclean
+.credential
