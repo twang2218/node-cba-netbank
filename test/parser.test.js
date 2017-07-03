@@ -237,7 +237,7 @@ describe('parser.js', () => {
 
   describe('- parseAccountList()', () => {
     test('should parse account list', () => {
-      expect.assertions(27);
+      expect.assertions((4 * 8) + 3);
       return expect(
         parser
           .parseAccountList({ url: links.home, headers: headersHtml, body: pages.home })
@@ -252,6 +252,8 @@ describe('parser.js', () => {
             expect(resp.accounts[0].number).toEqual('06200112340001');
             expect(resp.accounts[0].balance).toEqual(23.45);
             expect(resp.accounts[0].available).toEqual(-23.45);
+            expect(resp.accounts[0].link.length).toBeGreaterThan(1);
+            expect(resp.accounts[0].type).toEqual('DDA');
 
             expect(resp.accounts[1].name).toEqual('NetBank Saver');
             expect(resp.accounts[1].bsb).toEqual('062002');
@@ -259,6 +261,8 @@ describe('parser.js', () => {
             expect(resp.accounts[1].number).toEqual('06200212340012');
             expect(resp.accounts[1].balance).toEqual(1234.50);
             expect(resp.accounts[1].available).toEqual(234.50);
+            expect(resp.accounts[1].link.length).toBeGreaterThan(1);
+            expect(resp.accounts[1].type).toEqual('DDA');
 
             expect(resp.accounts[2].name).toEqual('GoalSaver');
             expect(resp.accounts[2].bsb).toEqual('062003');
@@ -266,6 +270,8 @@ describe('parser.js', () => {
             expect(resp.accounts[2].number).toEqual('06200310000013');
             expect(resp.accounts[2].balance).toEqual(76543.00);
             expect(resp.accounts[2].available).toEqual(76043.00);
+            expect(resp.accounts[2].link.length).toBeGreaterThan(1);
+            expect(resp.accounts[2].type).toEqual('DDA');
 
             expect(resp.accounts[3].name).toEqual('MasterCard Platinum');
             expect(resp.accounts[3].bsb).toEqual('');
@@ -273,6 +279,8 @@ describe('parser.js', () => {
             expect(resp.accounts[3].number).toEqual('5218012345678901');
             expect(resp.accounts[3].balance).toEqual(-123.45);
             expect(resp.accounts[3].available).toEqual(12345.67);
+            expect(resp.accounts[3].link.length).toBeGreaterThan(1);
+            expect(resp.accounts[3].type).toEqual('MCD');
 
             return resp;
           })

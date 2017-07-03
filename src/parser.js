@@ -206,7 +206,12 @@ function parseAccountList(resp) {
 
     accounts = accounts
       //  Assemble the `bsb` and `account` to construct `number`
-      .map(acc => Object.assign({}, acc, { number: `${acc.bsb}${acc.account}` }))
+      .map(acc =>
+        Object.assign({}, acc, {
+          number: `${acc.bsb}${acc.account}`,
+          type: `${/ACCOUNT_PRODUCT_TYPE=(\w+)/.exec(acc.link)[1]}`,
+        }),
+      )
       //  validate the account info
       .filter(acc => acc.name && acc.link && acc.account);
 
