@@ -60,13 +60,19 @@ Options:
   -o, --output    output file name
                  [string] [default: "[<name>](<number>) [<from> to <to>].<ext>"]
   --format        the output file format
-         [string] [choices: "json", "csv", "qif", "aus.qif", "us.qif"] [default:
+  [string] [choices: "json", "csv", "qif", "aus.qif", "us.qif", "ofx"] [default:
                                                                          "json"]
 ```
 
 You can use `-a` to specify which account you want to download the history from, and the value can be part of the name or account number. For example, if the account name you want to specified is `Smart Access`, then you can use `-a smart` to save some time.
 
-About the QIF format, `qif` is for `QIF(MYOB, MSMoney, or Quicken 2005 or later)`, `aus.qif` is for `QIF (Quicken AUS 2004 or earlier)`, and `us.qif` is for `QIF (Quicken US 2004 or earlier)`.
+Currently, `JSON`, `CSV`, `QIF` and `OFX` format is supported for the transactions history export format.
+
+About the QIF format, there are several options:
+
+* `qif` is most common one, which is for `QIF(MYOB, MSMoney, or Quicken 2005 or later)`;
+* `aus.qif` is for some old software, such as `QIF (Quicken AUS 2004 or earlier)`;
+* `us.qif` is for some old software, such as `QIF (Quicken US 2004 or earlier)`.
 
 ### Interactive UI
 
