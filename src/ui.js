@@ -67,7 +67,8 @@ class UI {
           .then((answer) => {
             if (answer.tryagain) {
               console.log();
-              return this.start(credential);
+              //  retry without give username/password, so user can give a new one to try.
+              return this.start(Object.assign({}, credential, { username: '', password: '' }));
             }
             throw new Error(msgQuit);
           }),
