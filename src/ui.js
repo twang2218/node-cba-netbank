@@ -53,10 +53,10 @@ class UI {
   }
 
   logon(credential) {
-    this.api = new API(credential);
+    this.api = new API();
     console.log(`Logon as account ${credential.username} ...`);
     return this.api
-      .logon(credential)
+      .logon(credential.username, credential.password)
       .catch(() =>
         inquirer
           .prompt({

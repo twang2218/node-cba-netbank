@@ -90,8 +90,8 @@ describe('api.js', () => {
         () => {
           expect.assertions(3);
           return expect(
-            new API(credential)
-              .logon()
+            new API()
+              .logon(credential.username, credential.password)
               .then((resp) => {
                 expect(resp.accounts).toBeDefined();
                 expect(resp.accounts.length).toBeGreaterThan(1);
@@ -109,7 +109,7 @@ describe('api.js', () => {
         'should failed if credential is not working',
         () => {
           expect.assertions(1);
-          return expect(new API(credentialWrong).logon()).rejects.toBeDefined();
+          return expect(new API().logon(credentialWrong.username, credentialWrong.password)).rejects.toBeDefined();
         },
         10000,
       );
@@ -120,10 +120,10 @@ describe('api.js', () => {
         'should retrieve transactions for given account',
         () => {
           expect.assertions(5);
-          const api = new API(credential);
+          const api = new API();
           return expect(
             api
-              .logon()
+              .logon(credential.username, credential.password)
               .then((resp) => {
                 expect(resp.accounts).toBeDefined();
                 expect(resp.accounts.length).toBeGreaterThan(0);
@@ -159,8 +159,8 @@ describe('api.js', () => {
       it('should be able to logon with correct credential', () => {
         expect.assertions(3);
         return expect(
-          new API(credential)
-            .logon()
+          new API()
+            .logon(credential.username, credential.password)
             .then((resp) => {
               expect(resp.accounts).toBeDefined();
               expect(resp.accounts.length).toBeGreaterThan(1);
@@ -174,7 +174,7 @@ describe('api.js', () => {
       });
       it('should failed if credential is not working', () => {
         expect.assertions(1);
-        return expect(new API(credentialWrong).logon()).rejects.toBeDefined();
+        return expect(new API().logon(credentialWrong.username, credentialWrong.password)).rejects.toBeDefined();
       });
     });
 
@@ -190,10 +190,10 @@ describe('api.js', () => {
 
       it('should retrieve transactions for given account', () => {
         expect.assertions(5);
-        const api = new API(credential);
+        const api = new API();
         return expect(
           api
-            .logon()
+            .logon(credential.username, credential.password)
             .then((resp) => {
               expect(resp.accounts).toBeDefined();
               expect(resp.accounts.length).toEqual(4);
@@ -212,7 +212,7 @@ describe('api.js', () => {
       });
       it('should failed if error happend during the transactions page parsing', () => {
         expect.assertions(1);
-        return expect(new API(credentialWrong).logon()).rejects.toBeDefined();
+        return expect(new API().logon(credentialWrong.username, credentialWrong.password)).rejects.toBeDefined();
       });
     });
   }

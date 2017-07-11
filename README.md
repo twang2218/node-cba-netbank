@@ -11,7 +11,6 @@
 Unofficial The Commonwealth Bank of Australia NetBank API wrap for
 Node.js
 
-
 # Usage
 
 ## CLI
@@ -119,13 +118,26 @@ npm install node-cba-netbank --save
 
 ### List Accounts
 
-```js
-const netbank = require('node-cba-netbank');
+API: `netbank.logon(username, password)`
 
-netbank.login({ username: '76543210', password: 'YOUR_PASSWORD' })
+* `username`: the netbank client number;
+* `password`: the netbank password;
+
+Returned object will contains an `accounts` field, which contains all the account information.
+
+#### Example of list accounts
+
+```js
+const Netbank = require('node-cba-netbank');
+
+const netbank = new Netbank();
+
+netbank.logon('76543210', 'YOUR_PASSWORD')
   .then(resp => {
     //  output account to console
-    resp.accounts.forEach(a => console.log(`${a.name} (${a.bsb} ${a.account}) => ${a.balance}/${a.available}`));
+    resp.accounts.forEach(
+      a => console.log(`${a.name} (${a.bsb} ${a.account}) => ${a.balance}/${a.available}`)
+    );
   })
   .catch(console.error);
 ```
@@ -143,22 +155,37 @@ NetBank Saver (062002 12340012) => 4321.01/4021.00
 
 For each account, there are following properties:
 
- * `name`: Account name;
- * `url`: Transaction page for the account, it will be different everytime you logged in;
- * `bsb`: BSB number;
- * `account`: Account number (without BSB part);
- * `number`: The entire account number, `bsb`+`account`, without space;
- * `balance`: Current account balance. It might be different from the available funds;
- * `available`: Current available funds of the account.
+* `name`: Account name;
+* `url`: Transaction page for the account, it will be different everytime you logged in;
+* `bsb`: BSB number;
+* `account`: Account number (without BSB part);
+* `number`: The entire account number, `bsb`+`account`, without space;
+* `balance`: Current account balance. It might be different from the available funds;
+* `available`: Current available funds of the account.
 
- ### Retrieve Transactions for Given Account
+### Retrieve Transactions for Given Account
+
+API: `netbank.getTransactionHistory(account, from, to)`
+
+* `account`: one of the account object retrieved from the previous `.logon()` api
+* `from`: the begin date of the search period. format is `DD/MM/YYYY`, *[default: 6 years ago (bank may not store transactions for such long time.)]*
+* `to`: the end date of the search period. format is `DD/MM/YYYY`, *[default: today]*
+
+The returned object will contains following field:
+
+* `transactions`: the processed transactions;
+* `pendings`: the pending transactions;
+
+#### Example of retrieve transactions
 
 ```js
- const netbank = require('node-cba-netbank');
+const Netbank = require('node-cba-netbank');
 
-netbank.login({ username: '76543210', password: 'YOUR_PASSWORD' })
-  // Assume we are going to retrieve the transactions of the first account
-  .then(resp => netbank.getTransactions(resp.accounts[0]))
+const netbank = new Netbank();
+
+netbank.logon('76543210', 'YOUR_PASSWORD')
+  // Assume we are going to retrieve the transactions of the first account, from '1/1/2017' to today
+  .then(resp => netbank.getTransactionHistory(resp.accounts[0], '1/1/2017'))
   .then((resp) => {
     //  output transactions to console
     resp.transactions.forEach(t => console.log(`${t.date} ${t.description} => ${t.amount}`));
@@ -170,7 +197,7 @@ netbank.login({ username: '76543210', password: 'YOUR_PASSWORD' })
 
  The transaction list will look like below:
 
-```
+```bash
 2015-04-20T00:00:00.004Z SO THAI RESTAURANT       KOGARAH => -13.9
 2015-04-20T00:00:00.003Z NOK NOK                  SYDNEY => -41.8
 ...
@@ -201,7 +228,6 @@ yarn test
 to have more details, you can run `yarn test-debug` for more verbose output.
 
 The test will try to login and get transactions from the first account, and if it will fail if the retrieved transactions number is less than 400. It's ok if you don't have that much transactions in the account. The purpose of checking whether it get more than 400 transactions is to check whether it can overcome the maximum transactions limits.
-
 
 [license-image]: http://img.shields.io/badge/license-Apache%202.0-blue.svg?style=flat
 [license-url]: LICENSE.txt

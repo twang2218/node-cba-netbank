@@ -18,12 +18,12 @@ const concat = (a, b) => uniq(a.concat(b));
 
 //  API
 class API {
-  constructor(credentials) {
-    this.credentials = credentials;
+  constructor() {
     this.web = new WebClient();
     this.host = NETBANK_HOST;
   }
-  logon() {
+  logon(username, password) {
+    this.credentials = { username, password };
     //  retrieve the logon page
     return (
       this.web

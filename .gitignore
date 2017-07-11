@@ -57,3 +57,7 @@ docs/
 .vscode/
 .yarnclean
 .credential
+\[*.json
+\[*.qif
+\[*.csv
+
