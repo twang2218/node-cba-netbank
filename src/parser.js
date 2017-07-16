@@ -3,6 +3,7 @@ const Promise = require('bluebird');
 const cheerio = require('cheerio');
 const moment = require('./moment');
 const debug = require('debug')('node-cba-netbank');
+const util = require('util');
 
 //  Constants
 const submittableSelector = 'input,select,textarea,keygen';
@@ -190,29 +191,30 @@ function parseAccountList(resp) {
       return reject('Cannot find account list.');
     }
 
-    let accounts = [];
+    const accounts = [];
     accountRows.each((index, elem) => {
-      const $$ = cheerio.load(elem);
-      accounts.push({
-        name: $$('.NicknameField .left a').text().trim(),
-        link: $$('.NicknameField .left a').attr('href'),
-        bsb: $$('.BSBField .text').text().replace(/\s+/g, '').trim(),
-        account: $$('.AccountNumberField .text').text().replace(/\s+/g, '').trim(),
-        balance: parseCurrencyHtml($$('.AccountBalanceField')),
-        available: parseCurrencyHtml($$('.AvailableFundsField')),
-      });
+      try {
+        const $$ = cheerio.load(elem);
+        const account = {
+          name: $$('.NicknameField .left a').text().trim(),
+          link: $$('.NicknameField .left a').attr('href'),
+          bsb: $$('.BSBField .text').text().replace(/\s+/g, '').trim(),
+          account: $$('.AccountNumberField .text').text().replace(/\s+/g, '').trim(),
+          balance: parseCurrencyHtml($$('.AccountBalanceField')),
+          available: parseCurrencyHtml($$('.AvailableFundsField')),
+        };
+        //  Assemble the `bsb` and `account` to construct `number`
+        account.number = `${account.bsb}${account.account}`;
+        account.type = `${/ACCOUNT_PRODUCT_TYPE=(\w+)/.exec(account.link)[1]}`;
+        //  push to the final account list if it's valid
+        if (account.name && account.link && account.account) {
+          accounts.push(account);
+        }
+      } catch (err) {
+        debug(`parseAccountList(): ${err}`);
+        debug(`parseAccountList(): elem => ${util.inspect(elem)}`);
+      }
     });
-
-    accounts = accounts
-      //  Assemble the `bsb` and `account` to construct `number`
-      .map(acc =>
-        Object.assign({}, acc, {
-          number: `${acc.bsb}${acc.account}`,
-          type: `${/ACCOUNT_PRODUCT_TYPE=(\w+)/.exec(acc.link)[1]}`,
-        }),
-      )
-      //  validate the account info
-      .filter(acc => acc.name && acc.link && acc.account);
 
     debug(`parseAccountList(): found ${accounts.length} accounts`);
     return resolve(Object.assign({}, resp, { accounts }));
