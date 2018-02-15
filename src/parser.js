@@ -14,45 +14,46 @@ const rCRLF = /\r?\n/g;
 //  Add support for allow `disabled` and `button` input element in the serialized array.
 function serializeArray(element, options = { disabled: false, button: false }) {
   // Resolve all form elements from either forms or collections of form elements
-  return element
-    .map((i, elem) => {
-      const $elem = cheerio(elem);
-      if (elem.name === 'form') {
-        return $elem.find(submittableSelector).toArray();
-      }
-      return $elem.filter(submittableSelector).toArray();
-    })
-    .filter(
+  return (
+    element
+      .map((i, elem) => {
+        const $elem = cheerio(elem);
+        if (elem.name === 'form') {
+          return $elem.find(submittableSelector).toArray();
+        }
+        return $elem.filter(submittableSelector).toArray();
+      })
       // Verify elements have a name (`attr.name`)
       // and are not disabled (`:disabled`) if `options.disabled === false`
       // and cannot be clicked (`[type=submit]`) if `options.button === true`
       // are used in 'x-www-form-urlencoded' ('[type=file]')
-      `[name!=""]${options.disabled ? '' : ':not(:disabled)'}:not(${options.button ? '' : ':submit, :button, '}:image, :reset, :file)` +
-        // and are either checked/don't have a checkable state
-        ':matches([checked], :not(:checkbox, :radio))',
+      // and are either checked/don't have a checkable state
       // Convert each of the elements to its value(s)
-    )
-    .map((i, elem) => {
-      const $elem = cheerio(elem);
-      const name = $elem.attr('name');
-      let value = $elem.val();
+      .filter(`[name!=""]${options.disabled ? '' : ':not(:disabled)'}:not(${
+        options.button ? '' : ':submit, :button, '
+      }:image, :reset, :file):matches([checked], :not(:checkbox, :radio))`)
+      .map((i, elem) => {
+        const $elem = cheerio(elem);
+        const name = $elem.attr('name');
+        let value = $elem.val();
 
-      // If there is no value set (e.g. `undefined`, `null`), then default value to empty
-      if (value == null) {
-        value = $elem.attr('type') === 'checkbox' ? 'on' : '';
-      }
+        // If there is no value set (e.g. `undefined`, `null`), then default value to empty
+        if (value == null) {
+          value = $elem.attr('type') === 'checkbox' ? 'on' : '';
+        }
 
-      // If we have an array of values (e.g. `<select multiple>`),
-      // return an array of key/value pairs
-      if (Array.isArray(value)) {
-        return value.map(val => ({ name, value: val.replace(rCRLF, '\r\n') })); //   These can occur inside of `<textarea>'s` // to guarantee consistency across platforms // We trim replace any line endings (e.g. `\r` or `\r\n` with `\r\n`)
-        // Otherwise (e.g. `<input type="text">`, return only one key/value pair
-      }
-      return { name, value: value.replace(rCRLF, '\r\n') };
+        // If we have an array of values (e.g. `<select multiple>`),
+        // return an array of key/value pairs
+        if (Array.isArray(value)) {
+          return value.map(val => ({ name, value: val.replace(rCRLF, '\r\n') })); //   These can occur inside of `<textarea>'s` // to guarantee consistency across platforms // We trim replace any line endings (e.g. `\r` or `\r\n` with `\r\n`)
+          // Otherwise (e.g. `<input type="text">`, return only one key/value pair
+        }
+        return { name, value: value.replace(rCRLF, '\r\n') };
 
-      // Convert our result to an array
-    })
-    .get();
+        // Convert our result to an array
+      })
+      .get()
+  );
 }
 
 //  parse the balance to a double number.
@@ -75,8 +76,15 @@ function parseCurrencyText(text) {
 //  to Number `1767.44`.
 function parseCurrencyHtml(elem) {
   const e = cheerio.load(`<div>${elem}</div>`);
-  const currency = parseFloat(e('.Currency').text().replace(/,/g, '').trim());
-  if (e('.PostFieldText').text().trim() === 'DR') {
+  const currency = parseFloat(e('.Currency')
+    .text()
+    .replace(/,/g, '')
+    .trim());
+  if (
+    e('.PostFieldText')
+      .text()
+      .trim() === 'DR'
+  ) {
     return -currency;
   }
   return currency;
@@ -101,7 +109,7 @@ function parseTransaction(json) {
       //  try parse the date from 'Date.Text' if previous attempt failed
       t = moment(json.Date.Text, 'DD MMM YYYY');
       //  use sort order to distinguish different transactions.
-      if (dateTag && !isNaN(+dateTag)) {
+      if (dateTag && !Number.isNaN(+dateTag)) {
         t.millisecond(+dateTag);
       }
     }
@@ -152,7 +160,7 @@ function parseForm(resp) {
     });
 
     if (Object.keys(form).length === 0) {
-      return reject('parseForm(): Cannot find form.');
+      return reject(new Error('parseForm(): Cannot find form.'));
     }
 
     return resolve(Object.assign({}, resp, { form: Object.assign({}, resp.form, form) }));
@@ -166,7 +174,8 @@ function parseViewState(resp) {
     const REGEX_VIEW_STATE = /(__VIEWSTATE|__EVENTVALIDATION|__VIEWSTATEGENERATOR)\|([^|]+)\|/g;
     let match = REGEX_VIEW_STATE.exec(resp.body);
     while (match) {
-      form[match[1]] = match[2];
+      const [, key, value] = match;
+      form[key] = value;
       match = REGEX_VIEW_STATE.exec(resp.body);
     }
     return resolve(Object.assign({}, resp, { form: Object.assign({}, resp.form, form) }));
@@ -188,7 +197,7 @@ function parseAccountList(resp) {
     const accountRows = $('.main_group_account_row');
 
     if (!accountRows || accountRows.length === 0) {
-      return reject('Cannot find account list.');
+      return reject(new Error('Cannot find account list.'));
     }
 
     const accounts = [];
@@ -196,10 +205,18 @@ function parseAccountList(resp) {
       try {
         const $$ = cheerio.load(elem);
         const account = {
-          name: $$('.NicknameField .left a').text().trim(),
+          name: $$('.NicknameField .left a')
+            .text()
+            .trim(),
           link: $$('.NicknameField .left a').attr('href'),
-          bsb: $$('.BSBField .text').text().replace(/\s+/g, '').trim(),
-          account: $$('.AccountNumberField .text').text().replace(/\s+/g, '').trim(),
+          bsb: $$('.BSBField .text')
+            .text()
+            .replace(/\s+/g, '')
+            .trim(),
+          account: $$('.AccountNumberField .text')
+            .text()
+            .replace(/\s+/g, '')
+            .trim(),
           balance: parseCurrencyHtml($$('.AccountBalanceField')),
           available: parseCurrencyHtml($$('.AvailableFundsField')),
         };
@@ -222,7 +239,9 @@ function parseAccountList(resp) {
 }
 
 function parseHomePage(resp) {
-  return parseForm(resp).then(parseTitle).then(parseAccountList);
+  return parseForm(resp)
+    .then(parseTitle)
+    .then(parseAccountList);
 }
 
 function parseTransactions(resp) {
@@ -240,9 +259,14 @@ function parseTransactions(resp) {
       if (json.Limit) {
         debug('parseTransactions(): However, it reaches the limit.');
       }
-      return resolve(Object.assign({}, resp, { transactions, more: json.More, limit: json.Limit, pendings }));
+      return resolve(Object.assign({}, resp, {
+        transactions,
+        more: json.More,
+        limit: json.Limit,
+        pendings,
+      }));
     }
-    return reject('Cannot find transactions in the resp');
+    return reject(new Error('Cannot find transactions in the resp'));
   });
 }
 
@@ -258,30 +282,38 @@ function parseAccountListWithKeys(resp) {
     const $ = cheerio.load(resp.body);
     const accounts = [];
 
-    $('#ctl00_ContentHeaderPlaceHolder_updatePanelAccount').find('option').each((i, e) => {
-      const texts = $(e).text().split('|').map(t => t.trim());
-      if (texts.length === 2) {
-        const acc = {
-          name: texts[0],
-          number: texts[1].replace(/\s+/g, ''),
-          key: $(e).attr('value'),
-        };
-        if (acc.key && acc.number && acc.name) {
-          accounts.push(acc);
+    $('#ctl00_ContentHeaderPlaceHolder_updatePanelAccount')
+      .find('option')
+      .each((i, e) => {
+        const texts = $(e)
+          .text()
+          .split('|')
+          .map(t => t.trim());
+        if (texts.length === 2) {
+          const acc = {
+            name: texts[0],
+            number: texts[1].replace(/\s+/g, ''),
+            key: $(e).attr('value'),
+          };
+          if (acc.key && acc.number && acc.name) {
+            accounts.push(acc);
+          }
         }
-      }
-    });
+      });
 
     if (accounts.length > 0) {
       resolve(Object.assign({}, resp, { accounts }));
     } else {
-      reject('Cannot find accounts keys');
+      reject(new Error('Cannot find accounts keys'));
     }
   });
 }
 
 function parseTransactionPage(resp) {
-  return parseForm(resp).then(parseTitle).then(parseTransactions).then(parseAccountListWithKeys);
+  return parseForm(resp)
+    .then(parseTitle)
+    .then(parseTransactions)
+    .then(parseAccountListWithKeys);
 }
 
 module.exports = {

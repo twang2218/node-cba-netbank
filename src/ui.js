@@ -71,8 +71,7 @@ class UI {
               return this.start(Object.assign({}, credential, { username: '', password: '' }));
             }
             throw new Error(msgQuit);
-          }),
-      )
+          }))
       .then((resp) => {
         this.accounts = resp.accounts;
         return this.accounts;
@@ -81,7 +80,13 @@ class UI {
 
   chooseAccountAndShowHistory(months) {
     return this.selectAccount()
-      .then(account => this.downloadHistoryAndShow(account, moment().subtract(months, 'months').format(moment.formats.default)))
+      .then(account =>
+        this.downloadHistoryAndShow(
+          account,
+          moment()
+            .subtract(months, 'months')
+            .format(moment.formats.default),
+        ))
       .then(() => this.chooseAccountAndShowHistory(months));
   }
 
@@ -117,9 +122,7 @@ class UI {
         .map(t => Object.assign({}, t, { pending: true }))
         .concat(history.transactions);
       console.log(Render.transactions(allTransactions));
-      console.log(
-        `Total ${history.transactions.length} transactions and ${history.pendings.length} pending transactions.`,
-      );
+      console.log(`Total ${history.transactions.length} transactions and ${history.pendings.length} pending transactions.`);
       return history;
     });
   }

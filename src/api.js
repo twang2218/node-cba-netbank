@@ -42,8 +42,7 @@ class API {
               //  and make JS detector happy
               JS: 'E',
             }),
-          }),
-        )
+          }))
         .then(resp => this.refreshBase(resp))
         //  parse the home page to retrieve the accounts list
         .then(parser.parseHomePage)
@@ -58,7 +57,9 @@ class API {
   //  * `to`: Default value is today.
   getTransactionHistory(
     account,
-    from = moment().subtract(6, 'years').format(moment.formats.default),
+    from = moment()
+      .subtract(6, 'years')
+      .format(moment.formats.default),
     to = moment().format(moment.formats.default),
   ) {
     debug(`getTransactionHistory(account: ${account.name} [${account.number}] => ${account.available})`);
@@ -123,7 +124,8 @@ class API {
       // fill the form
       ctl00$ctl00: 'ctl00$BodyPlaceHolder$UpdatePanelForAjax|ctl00$BodyPlaceHolder$UpdatePanelForAjax',
       __EVENTTARGET: 'ctl00$BodyPlaceHolder$UpdatePanelForAjax',
-      __EVENTARGUMENT: 'doPostBackApiCall|LoadTransactions|{"ClearCache":"false","IsSorted":false,"IsAdvancedSearch":true,"IsMonthSearch":false}',
+      __EVENTARGUMENT:
+        'doPostBackApiCall|LoadTransactions|{"ClearCache":"false","IsSorted":false,"IsAdvancedSearch":true,"IsMonthSearch":false}',
     });
     // send the request
     return this.web
@@ -156,9 +158,9 @@ class API {
   }
 
   getTransactionsByDate(response, account, from, to) {
-    debug(
-      `getTransactionsByDate(account: ${account.name} [${account.number}] => ${account.available}, from: ${from}, to: ${to})`,
-    );
+    debug(`getTransactionsByDate(account: ${account.name} [${account.number}] => ${
+      account.available
+    }, from: ${from}, to: ${to})`);
     const form = Object.assign({}, response.form, {
       // fill the form
       ctl00$ctl00: 'ctl00$BodyPlaceHolder$updatePanelSearch|ctl00$BodyPlaceHolder$lbSearch',
@@ -217,13 +219,13 @@ class API {
               //  have the transactions, a real error, then use previous `resp` instead.
               const r = error.response || resp;
               //  find the earliest date as new 'to' date.
-              let timestamp = r.transactions[0].timestamp;
+              let { timestamp: earliest } = r.transactions[0];
               r.transactions.forEach((t) => {
-                if (timestamp > t.timestamp) {
-                  timestamp = t.timestamp;
+                if (earliest > t.timestamp) {
+                  earliest = t.timestamp;
                 }
               });
-              const newTo = moment(timestamp).format(moment.formats.default);
+              const newTo = moment(earliest).format(moment.formats.default);
 
               // Call self again
               debug(`Call getTransactionsByDate() again with new 'to' date (${to} => ${newTo})`);

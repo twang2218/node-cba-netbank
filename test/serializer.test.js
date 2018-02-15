@@ -40,13 +40,10 @@ describe('serializer.js', () => {
   };
 
   it('should be able to serialize to CSV', () => {
-    expect(serializer.csv(transactions)).toEqual(
-      '03/07/2017,"-123.00","PENDING - YUMCHA","0.00"\r\n03/07/2017,"+12.30","CAFE","+1234.12"\r\n',
-    );
+    expect(serializer.csv(transactions)).toEqual('03/07/2017,"-123.00","PENDING - YUMCHA","0.00"\r\n03/07/2017,"+12.30","CAFE","+1234.12"\r\n');
   });
   it('should be able to serialize to QIF (default)', () => {
-    expect(serializer.qif(transactions)).toEqual(
-      '!Type:Bank\r\n' +
+    expect(serializer.qif(transactions)).toEqual('!Type:Bank\r\n' +
         'D03/07/2017\r\n' +
         'T-123.00\r\n' +
         'PPENDING - YUMCHA\r\n' +
@@ -56,12 +53,10 @@ describe('serializer.js', () => {
         'T12.30\r\n' +
         'PCAFE\r\n' +
         'LDEP\r\n' +
-        '^\r\n',
-    );
+        '^\r\n');
   });
   it('should be able to serialize to QIF (old Quicken AUS)', () => {
-    expect(serializer.qif(transactions, 'aus')).toEqual(
-      '!Type:Bank\r\n' +
+    expect(serializer.qif(transactions, 'aus')).toEqual('!Type:Bank\r\n' +
         'D03/07/17\r\n' +
         'T-123.00\r\n' +
         'PPENDING - YUMCHA\r\n' +
@@ -69,12 +64,10 @@ describe('serializer.js', () => {
         'D03/07/17\r\n' +
         'T12.30\r\n' +
         'PCAFE\r\n' +
-        '^\r\n',
-    );
+        '^\r\n');
   });
   it('should be able to serialize to QIF (old Quicken US)', () => {
-    expect(serializer.qif(transactions, 'us')).toEqual(
-      '!Type:Bank\r\n' +
+    expect(serializer.qif(transactions, 'us')).toEqual('!Type:Bank\r\n' +
         'D07/03/17\r\n' +
         'T-123.00\r\n' +
         'PPENDING - YUMCHA\r\n' +
@@ -82,12 +75,10 @@ describe('serializer.js', () => {
         'D07/03/17\r\n' +
         'T12.30\r\n' +
         'PCAFE\r\n' +
-        '^\r\n',
-    );
+        '^\r\n');
   });
   it('should be able to serialize to OFX (DDA)', () => {
-    expect(serializer.ofx(transactions, accountDDA, '01/07/2017', '05/07/2017')).toEqual(
-      'OFXHEADER:100\n' +
+    expect(serializer.ofx(transactions, accountDDA, '01/07/2017', '05/07/2017')).toEqual('OFXHEADER:100\n' +
         'DATA:OFXSGML\n' +
         'VERSION:102\n' +
         'SECURITY:NONE\n' +
@@ -153,12 +144,10 @@ describe('serializer.js', () => {
         '</STMTRS>\n' +
         '</STMTTRNRS>\n' +
         '</BANKMSGSRSV1>\n' +
-        '</OFX>\n',
-    );
+        '</OFX>\n');
   });
   it('should be able to serialize to OFX (CreditCard)', () => {
-    expect(serializer.ofx(transactions, accountMCD, '01/07/2017', '05/07/2017')).toEqual(
-      'OFXHEADER:100\n' +
+    expect(serializer.ofx(transactions, accountMCD, '01/07/2017', '05/07/2017')).toEqual('OFXHEADER:100\n' +
         'DATA:OFXSGML\n' +
         'VERSION:102\n' +
         'SECURITY:NONE\n' +
@@ -222,7 +211,6 @@ describe('serializer.js', () => {
         '</CCSTMTRS>\n' +
         '</CCSTMTTRNRS>\n' +
         '</CREDITCARDMSGSRSV1>\n' +
-        '</OFX>\n',
-    );
+        '</OFX>\n');
   });
 });

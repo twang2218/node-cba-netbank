@@ -19,9 +19,7 @@ describe('render.js', () => {
       balance: 1234.56,
       available: 1034.56,
     };
-    expect(stripAnsi(render.account(account))).toEqual(
-      'Smart Access \t(2012 12345678)\t Balance: $1234.56 \t Available Funds: $1034.56',
-    );
+    expect(stripAnsi(render.account(account))).toEqual('Smart Access \t(2012 12345678)\t Balance: $1234.56 \t Available Funds: $1034.56');
   });
   it('should parse account list into table', () => {
     const accounts = [
@@ -43,12 +41,10 @@ describe('render.js', () => {
       },
     ];
 
-    expect(stripAnsi(render.accounts(accounts))).toEqual(
-      'Name          Number         Balance   Available\n' +
-      '------------  -------------  --------  ---------\n' +
-      'Smart Access  2012 12345678  $1234.56  $1034.56 \n' +
-      'Goal Saver    2013 76543210  $2345.78  $2345.56 \n',
-    );
+    expect(stripAnsi(render.accounts(accounts))).toEqual('Name          Number         Balance   Available\n' +
+        '------------  -------------  --------  ---------\n' +
+        'Smart Access  2012 12345678  $1234.56  $1034.56 \n' +
+        'Goal Saver    2013 76543210  $2345.78  $2345.56 \n');
   });
   it('should parse transaction list into table', () => {
     const transactions = [
@@ -66,11 +62,9 @@ describe('render.js', () => {
         balance: 1234.12,
       },
     ];
-    expect(stripAnsi(render.transactions(transactions))).toEqual(
-      'Time              Description       Amount   Balance \n' +
-      '----------------  ----------------  -------  --------\n' +
-      '2017-07-03 23:08  PENDING - YUMCHA  $123.00          \n' +
-      '2017-07-03 00:12  CAFE              $12.30   $1234.12\n',
-    );
+    expect(stripAnsi(render.transactions(transactions))).toEqual('Time              Description       Amount   Balance \n' +
+        '----------------  ----------------  -------  --------\n' +
+        '2017-07-03 23:08  PENDING - YUMCHA  $123.00          \n' +
+        '2017-07-03 00:12  CAFE              $12.30   $1234.12\n');
   });
 });

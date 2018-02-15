@@ -52,45 +52,46 @@ const myArgv = yargs
   .command(
     'download',
     'Download transactions history for given account',
-  {
-    a: {
-      alias: 'account',
-      demandOption: true,
-      describe: 'account name or number',
-      type: 'string',
+    {
+      a: {
+        alias: 'account',
+        demandOption: true,
+        describe: 'account name or number',
+        type: 'string',
+      },
+      f: {
+        alias: 'from',
+        default: moment()
+          .subtract(3, 'months')
+          .format(moment.formats.default),
+        describe: 'history range from date',
+        type: 'string',
+      },
+      t: {
+        alias: 'to',
+        default: moment().format(moment.formats.default),
+        describe: 'history range to date',
+        type: 'string',
+      },
+      o: {
+        alias: 'output',
+        default: outputFilenameTemplate,
+        describe: 'output file name',
+        type: 'string',
+      },
+      format: {
+        default: 'json',
+        describe: 'the output file format',
+        type: 'string',
+        choices: ['json', 'csv', 'qif', 'aus.qif', 'us.qif', 'ofx'],
+      },
     },
-    f: {
-      alias: 'from',
-      default: moment().subtract(3, 'months').format(moment.formats.default),
-      describe: 'history range from date',
-      type: 'string',
-    },
-    t: {
-      alias: 'to',
-      default: moment().format(moment.formats.default),
-      describe: 'history range to date',
-      type: 'string',
-    },
-    o: {
-      alias: 'output',
-      default: outputFilenameTemplate,
-      describe: 'output file name',
-      type: 'string',
-    },
-    format: {
-      default: 'json',
-      describe: 'the output file format',
-      type: 'string',
-      choices: ['json', 'csv', 'qif', 'aus.qif', 'us.qif', 'ofx'],
-    },
-  },
     (argv) => {
       debug(`Download transactions ${JSON.stringify(argv)}...`);
       ui.logon(argv).then((accounts) => {
         //  matching accounts
-        const account = accounts.find(
-          a => a.name.toLowerCase().indexOf(argv.account.toLowerCase()) >= 0 || a.number.indexOf(argv.account) >= 0,
-        );
+        const account = accounts.find(a => a.name.toLowerCase().indexOf(argv.account.toLowerCase()) >= 0
+          || a.number.indexOf(argv.account) >= 0);
         if (account) {
           debug(`${render.account(account)}`);
           ui.downloadHistory(account, argv.from, argv.to).then((history) => {
@@ -139,14 +140,14 @@ const myArgv = yargs
   .command(
     'ui',
     'Interactive user interface.',
-  {
-    m: {
-      alias: 'months',
-      default: 2,
-      describe: 'how many months of history should be shown',
-      type: 'number',
+    {
+      m: {
+        alias: 'months',
+        default: 2,
+        describe: 'how many months of history should be shown',
+        type: 'number',
+      },
     },
-  },
     (argv) => {
       debug(`UI: ${JSON.stringify(argv)}...`);
       ui.start(argv).catch(debug);

@@ -89,19 +89,17 @@ describe('api.js', () => {
         'should be able to logon with correct credential',
         () => {
           expect.assertions(3);
-          return expect(
-            new API()
-              .logon(credential.username, credential.password)
-              .then((resp) => {
-                expect(resp.accounts).toBeDefined();
-                expect(resp.accounts.length).toBeGreaterThan(1);
-                return resp;
-              })
-              .catch((err) => {
-                debug(err);
-                throw err;
-              }),
-          ).resolves.toBeDefined();
+          return expect(new API()
+            .logon(credential.username, credential.password)
+            .then((resp) => {
+              expect(resp.accounts).toBeDefined();
+              expect(resp.accounts.length).toBeGreaterThan(1);
+              return resp;
+            })
+            .catch((err) => {
+              debug(err);
+              throw err;
+            })).resolves.toBeDefined();
         },
         10000,
       );
@@ -121,24 +119,22 @@ describe('api.js', () => {
         () => {
           expect.assertions(5);
           const api = new API();
-          return expect(
-            api
-              .logon(credential.username, credential.password)
-              .then((resp) => {
-                expect(resp.accounts).toBeDefined();
-                expect(resp.accounts.length).toBeGreaterThan(0);
-                return api.getTransactionHistory(resp.accounts[0]);
-              })
-              .then((resp) => {
-                expect(resp.transactions).toBeDefined();
-                expect(resp.transactions.length).toBeGreaterThan(400);
-                return resp;
-              })
-              .catch((err) => {
-                debug(err);
-                throw err;
-              }),
-          ).resolves.toBeDefined();
+          return expect(api
+            .logon(credential.username, credential.password)
+            .then((resp) => {
+              expect(resp.accounts).toBeDefined();
+              expect(resp.accounts.length).toBeGreaterThan(0);
+              return api.getTransactionHistory(resp.accounts[0]);
+            })
+            .then((resp) => {
+              expect(resp.transactions).toBeDefined();
+              expect(resp.transactions.length).toBeGreaterThan(400);
+              return resp;
+            })
+            .catch((err) => {
+              debug(err);
+              throw err;
+            })).resolves.toBeDefined();
         },
         120000,
       );
@@ -158,19 +154,17 @@ describe('api.js', () => {
 
       it('should be able to logon with correct credential', () => {
         expect.assertions(3);
-        return expect(
-          new API()
-            .logon(credential.username, credential.password)
-            .then((resp) => {
-              expect(resp.accounts).toBeDefined();
-              expect(resp.accounts.length).toBeGreaterThan(1);
-              return resp;
-            })
-            .catch((err) => {
-              debug(err);
-              throw err;
-            }),
-        ).resolves.toBeDefined();
+        return expect(new API()
+          .logon(credential.username, credential.password)
+          .then((resp) => {
+            expect(resp.accounts).toBeDefined();
+            expect(resp.accounts.length).toBeGreaterThan(1);
+            return resp;
+          })
+          .catch((err) => {
+            debug(err);
+            throw err;
+          })).resolves.toBeDefined();
       });
       it('should failed if credential is not working', () => {
         expect.assertions(1);
@@ -191,24 +185,22 @@ describe('api.js', () => {
       it('should retrieve transactions for given account', () => {
         expect.assertions(5);
         const api = new API();
-        return expect(
-          api
-            .logon(credential.username, credential.password)
-            .then((resp) => {
-              expect(resp.accounts).toBeDefined();
-              expect(resp.accounts.length).toEqual(4);
-              return api.getTransactionHistory(resp.accounts[0]);
-            })
-            .then((resp) => {
-              expect(resp.transactions).toBeDefined();
-              expect(resp.transactions.length).toEqual(99);
-              return resp;
-            })
-            .catch((err) => {
-              debug(err);
-              throw err;
-            }),
-        ).resolves.toBeDefined();
+        return expect(api
+          .logon(credential.username, credential.password)
+          .then((resp) => {
+            expect(resp.accounts).toBeDefined();
+            expect(resp.accounts.length).toEqual(4);
+            return api.getTransactionHistory(resp.accounts[0]);
+          })
+          .then((resp) => {
+            expect(resp.transactions).toBeDefined();
+            expect(resp.transactions.length).toEqual(99);
+            return resp;
+          })
+          .catch((err) => {
+            debug(err);
+            throw err;
+          })).resolves.toBeDefined();
       });
       it('should failed if error happend during the transactions page parsing', () => {
         expect.assertions(1);
