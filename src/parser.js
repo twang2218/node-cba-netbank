@@ -228,7 +228,7 @@ function parseHomePage(resp) {
 function parseTransactions(resp) {
   return new Promise((resolve, reject) => {
     //  Get transactions
-    const m = /({"Transactions":(?:[^;]+))\);/.exec(resp.body);
+    const m = /({"Transactions":(?:.+)})\);/.exec(resp.body);
     let transactions;
     if (m) {
       const json = JSON.parse(m[1]);
