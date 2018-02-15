@@ -7,7 +7,6 @@ node_js:
   - node
   - '8'
   - '6'
-  - '4'
 git:
   depth: 10
 script: yarn test-debug
