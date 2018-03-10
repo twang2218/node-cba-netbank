@@ -13,8 +13,15 @@ const PATH = {
   HOME: '/netbank/Portfolio/Home/Home.aspx?RID=:RID&SID=:SID',
 };
 
+const SixYearsAgo = moment().subtract(6, 'years').format(moment.formats.default);
+const Today = moment().format(moment.formats.default);
+
 //  Utilities
 const concat = (a, b) => uniq(a.concat(b));
+
+const mergeTransactions = (oldResp, newResp, form) =>
+  ({ ...newResp, form, transactions: concat(oldResp.transactions, newResp.transactions) });
+
 
 //  API
 class API {
@@ -22,31 +29,44 @@ class API {
     this.web = new WebClient();
     this.host = NETBANK_HOST;
   }
-  logon(username, password) {
+
+  async getLogonForm() {
+    const resp = await this.web.get(this.getUrl(PATH.LOGON));
+    this.refreshBase(resp);
+
+    const { form } = await parser.parseForm(resp);
+    return form;
+  }
+
+  async postLogonForm(form, username, password) {
+    const resp = await this.web.post({
+      url: this.getUrl(PATH.LOGON),
+      form: {
+        //  The basic form
+        ...form,
+        //  Fill the credential
+        txtMyClientNumber$field: username,
+        txtMyPassword$field: password,
+        chkRemember$field: 'on',
+        //  and make JS detector happy
+        JS: 'E',
+      },
+    });
+    this.refreshBase(resp);
+    return parser.parseHomePage(resp);
+  }
+
+  async logon(username, password) {
     this.credentials = { username, password };
     //  retrieve the logon page
-    return (
-      this.web
-        .get(this.getUrl(PATH.LOGON))
-        //  Parse the page to get logon form
-        .then(resp => this.refreshBase(resp))
-        .then(parser.parseForm)
-        .then(resp =>
-          //  fill the logon form and submit
-          this.web.post({
-            url: this.getUrl(PATH.LOGON),
-            form: Object.assign({}, resp.form, {
-              txtMyClientNumber$field: this.credentials.username,
-              txtMyPassword$field: this.credentials.password,
-              chkRemember$field: 'on',
-              //  and make JS detector happy
-              JS: 'E',
-            }),
-          }))
-        .then(resp => this.refreshBase(resp))
-        //  parse the home page to retrieve the accounts list
-        .then(parser.parseHomePage)
-    );
+    const form = await this.getLogonForm();
+    return this.postLogonForm(form, username, password);
+  }
+
+  async getTransactionPage(link) {
+    const resp = await this.web.get(this.getUrl(link));
+    this.refreshBase(resp);
+    return parser.parseTransactionPage(resp);
   }
 
   //  Get transaction history data for given time period.
@@ -55,42 +75,34 @@ class API {
   //    without getting any error message, however, keep in mind that bank
   //    usually only stored 2 years transactions history data.
   //  * `to`: Default value is today.
-  getTransactionHistory(
-    account,
-    from = moment()
-      .subtract(6, 'years')
-      .format(moment.formats.default),
-    to = moment().format(moment.formats.default),
-  ) {
+  async getTransactionHistory(account, from = SixYearsAgo, to = Today) {
     debug(`getTransactionHistory(account: ${account.name} [${account.number}] => ${account.available})`);
     //  retrieve post form and key for the given account
-    return this.web
-      .get(this.getUrl(account.link))
-      .then(parser.parseTransactionPage)
-      .then(resp => this.refreshBase(resp))
-      .then((resp) => {
-        const acc = Object.assign({}, account, { link: Url.parse(resp.url).path });
-        if (resp.accounts !== null) {
-          acc.key = resp.accounts.find(a => a.number === account.number).key;
-        }
 
-        //  if the transaction section is lazy loading, we need do a panel update
-        //  first, before the real search.
-        if (!resp.form.ctl00$BodyPlaceHolder$radioSwitchSearchType$field$) {
-          return this.lazyLoading(resp, acc)
-            .then(r => this.getTransactionsByDate(r, acc, from, to)) //  attach pendings
-            .then(r => Object.assign({}, r, { pendings: resp.pendings }));
-        }
-        return (
-          this.getTransactionsByDate(resp, acc, from, to)
-            //  attach pending
-            .then(r => Object.assign({}, r, { pendings: resp.pendings }))
-            .then((r) => {
-              debug(`getTransactionHistory(): Total received ${r.transactions.length} transactions.`);
-              return r;
-            })
-        );
-      });
+    const respTP = await this.getTransactionPage(account.link);
+    const acc = { ...account, link: Url.parse(respTP.url).path };
+
+    //  Get Account Key
+    if (respTP.accounts !== null) {
+      const accFound = respTP.accounts.find(a => a.number === account.number);
+      if (!accFound) {
+        throw new Error(`TransactionPage doesn't contain given account. ${JSON.stringify(respTP.accounts)}`);
+      }
+      acc.key = accFound.key;
+    }
+
+    //  if the transaction section is lazy loading, we need do a panel update
+    //  first, before the real search.
+    if (!respTP.form.ctl00$BodyPlaceHolder$radioSwitchSearchType$field$) {
+      const respLazy = await this.lazyLoading(respTP, acc);
+      const respTBD = await this.getTransactionsByDate(respLazy, acc, from, to);
+      return { ...respTBD, pendings: respTP.pendings };
+    }
+
+    const respTBD = await this.getTransactionsByDate(respTP, acc, from, to);
+    debug(`getTransactionHistory(): Total received ${respTBD.transactions.length} transactions.`);
+    //  attach pending
+    return { ...respTBD, pendings: respTP.pendings };
   }
 
   //  Web API
@@ -100,68 +112,72 @@ class API {
   //  fail. To workaround such problem, we send an update panel partial callback
   //  first,let server side prepared the search panel and download transaction.
   //  Then, do the real search using the information from the parital callback result.
-  lazyLoading(response, account) {
+  async lazyLoading(response, account) {
     debug(`lazyLoading(account: ${account.name} [${account.number}] => ${account.available}))`);
-    return this.web
+    let resp = this.web
       .post({
         url: this.getUrl(account.link),
-        form: Object.assign({}, response.form, {
+        form: {
+          ...response.form,
           //  Send partial request
           ctl00$ctl00: 'ctl00$BodyPlaceHolder$UpdatePanelForAjax|ctl00$BodyPlaceHolder$UpdatePanelForAjaxh',
           __EVENTTARGET: 'ctl00$BodyPlaceHolder$UpdatePanelForAjax',
           __EVENTARGUMENT: 'doPostBackApiCall|LoadRecentTransactions|false',
-        }),
+        },
         partial: true,
-      })
-      .then(parser.parseViewState)
-      .then(resp => parser.parseForm(resp).catch(() => resp))
-      .then(resp => Object.assign({}, resp, { form: Object.assign({}, response.form, resp.form) }));
+      });
+    resp = await parser.parseViewState(resp);
+    try {
+      resp = await parser.parseForm(resp);
+    } catch (e) {
+      debug(`lazyLoading(): ${JSON.stringify(e)}`);
+    }
+
+    return { ...resp, form: { ...response.form, ...resp.form } };
   }
 
-  getMoreTransactions(response, account) {
-    debug(`getMoreTransactions(account: ${account.name} [${account.number}] => ${account.available})`);
-    const form = Object.assign({}, response.form, {
+  async getMoreTransactionsPage(link, form) {
+    const newForm = {
+      ...form,
       // fill the form
       ctl00$ctl00: 'ctl00$BodyPlaceHolder$UpdatePanelForAjax|ctl00$BodyPlaceHolder$UpdatePanelForAjax',
       __EVENTTARGET: 'ctl00$BodyPlaceHolder$UpdatePanelForAjax',
-      __EVENTARGUMENT:
-        'doPostBackApiCall|LoadTransactions|{"ClearCache":"false","IsSorted":false,"IsAdvancedSearch":true,"IsMonthSearch":false}',
-    });
-    // send the request
-    return this.web
-      .post({
-        url: this.getUrl(account.link),
-        form,
-        partial: true,
-      })
-      .then(parser.parseTransactions)
-      .then(resp => this.refreshBase(resp))
-      .then((resp) => {
-        if (!resp.more || resp.limit) {
-          //  There is no more transactions or reached the limit.
-          return resp;
-        }
-        return (
-          this.getMoreTransactions(
-            Object.assign({}, resp, { form }),
-            Object.assign({}, account, { link: Url.parse(resp.url).path }),
-          )
-            //  concat more transactions.
-            .then(r => Object.assign({}, r, { form, transactions: concat(resp.transactions, r.transactions) }))
-            //  Ignore the error as we have got some transactions already
-            .catch((error) => {
-              debug(error);
-              return resp;
-            })
-        );
-      });
+      __EVENTARGUMENT: 'doPostBackApiCall|LoadTransactions|{"ClearCache":"false","IsSorted":false,"IsAdvancedSearch":true,"IsMonthSearch":false}',
+    };
+
+    const resp = await this.web.post({ url: this.getUrl(link), form: newForm, partial: true });
+    this.refreshBase(resp);
+    return parser.parseTransactions(resp);
   }
 
-  getTransactionsByDate(response, account, from, to) {
-    debug(`getTransactionsByDate(account: ${account.name} [${account.number}] => ${
-      account.available
-    }, from: ${from}, to: ${to})`);
-    const form = Object.assign({}, response.form, {
+  async getMoreTransactions(response, account) {
+    debug(`getMoreTransactions(account: ${account.name} [${account.number}] => ${account.available})`);
+    debug(JSON.stringify(account));
+    const resp = await this.getMoreTransactionsPage(account.link, response.form);
+
+    debug(`getMoreTransactions(): more = ${resp.more}, limit = ${resp.limit}`);
+    if (!resp.more || resp.limit) {
+      //  There is no more transactions or reached the limit.
+      return resp;
+    }
+
+    //  load more
+    try {
+      const respMore = await this.getMoreTransactions(
+        { ...resp, form: response.form },
+        { ...account, link: Url.parse(resp.url).path },
+      );
+      return mergeTransactions(resp, respMore, response.form);
+    } catch (e) {
+      debug(`getMoreTransactions(): 'load more error,', ${e}`);
+      return resp;
+    }
+  }
+
+
+  async postHistoryByDatePage(link, form, from, to) {
+    const formDate = {
+      ...form,
       // fill the form
       ctl00$ctl00: 'ctl00$BodyPlaceHolder$updatePanelSearch|ctl00$BodyPlaceHolder$lbSearch',
       __EVENTTARGET: 'ctl00$BodyPlaceHolder$lbSearch',
@@ -173,82 +189,74 @@ class API {
       ctl00$BodyPlaceHolder$toCalTxtBox$field: to,
       //  Add this for partial update
       ctl00$BodyPlaceHolder$radioSwitchSearchType$field$: 'AllTransactions',
-    });
+    };
 
-    return this.web
-      .post({
-        url: this.getUrl(account.link),
-        form,
-        partial: true,
-      })
-      .then(parser.parseTransactions)
-      .then(resp => this.refreshBase(resp))
-      .then((resp) => {
-        if (!resp.more || resp.limit) {
-          //  there is no more transactions or reached the limit.
-          return resp;
-        }
-        //  There are more transactions available.
-        return (
-          this.getMoreTransactions(
-            Object.assign({}, resp, { form }),
-            Object.assign({}, account, { link: Url.parse(resp.url).path }),
-          )
-            //  concat more transactions.
-            .then(r => Object.assign({}, r, { form, transactions: concat(resp.transactions, r.transactions) }))
-            .then((r) => {
-              debug(`getTransactionsByDate(): getMoreTransactions(): More => ${r.more}, Limit => ${r.limit}`);
-              if (r.more && r.limit) {
-                //  if there are more transactions, however it reaches limit
-                //  we need to send another search request to overcome the limit.
-                throw Object.assign(new Error('Reach transations limit'), { response: r });
-              }
-              return r;
-            })
-            .catch((error) => {
-              //  an error happend during load more, it means that it may have more,
-              //  however, some restriction made it stopped, so we call it again,
-              //  but this time, we use the eariliest date from the transactions
-              //  we retrieved so far as the toDate, so it might workaround this
-              //  problem.
+    const resp = await this.web.post({ url: this.getUrl(link), form: formDate, partial: true });
+    this.refreshBase(resp);
+    return parser.parseTransactions(resp);
+  }
 
-              debug(error);
+  async getTransactionsByDate(response, account, from, to) {
+    debug(`getTransactionsByDate(account: ${account.name} [${account.number}] => ${
+      account.available
+    }, from: ${from}, to: ${to})`);
 
-              //  if there is a `response` object attached to `error` object, that means
-              //  it's just reach the limit, and contains transations. Otherwise, it don't
-              //  have the transactions, a real error, then use previous `resp` instead.
-              const r = error.response || resp;
-              //  find the earliest date as new 'to' date.
-              let { timestamp: earliest } = r.transactions[0];
-              r.transactions.forEach((t) => {
-                if (earliest > t.timestamp) {
-                  earliest = t.timestamp;
-                }
-              });
-              const newTo = moment(earliest).format(moment.formats.default);
+    const respBD = await this.postHistoryByDatePage(account.link, response.form, from, to);
+    if (!respBD.more || respBD.limit) {
+      //  there is no more transactions or reached the limit.
+      return respBD;
+    }
 
-              // Call self again
-              debug(`Call getTransactionsByDate() again with new 'to' date (${to} => ${newTo})`);
-              return (
-                this.getTransactionsByDate(
-                  Object.assign({}, r, { form }),
-                  Object.assign({}, account, { link: Url.parse(r.url).path }),
-                  from,
-                  newTo,
-                )
-                  //  concat more transactions
-                  .then(rr => Object.assign({}, rr, { form, transactions: concat(r.transactions, rr.transactions) }))
-                  .catch((err) => {
-                    //  cannot call it again, but we got some transactions at least,
-                    //  so, just call it a success.
-                    debug(err);
-                    debug('getTransactionsByDate(): failed to call self again to load more');
-                    return Object.assign({}, r, { form, transactions: r.transactions });
-                  })
-              );
-            })
+    //  There are more transactions available.
+    try {
+      const respMore = await this.getMoreTransactions(
+        { ...respBD, form: respBD.form },
+        { ...account, link: Url.parse(respBD.url).path },
+      );
+      const respMoreMerged = mergeTransactions(respBD, respMore, respBD.form);
+      debug(`getTransactionsByDate(): getMoreTransactions(): More => ${respMoreMerged.more}, Limit => ${respMoreMerged.limit}`);
+      if (respMoreMerged.more && respMoreMerged.limit) {
+        //  if there are more transactions, however it reaches limit
+        //  we need to send another search request to overcome the limit.
+        throw Object.assign(new Error('Reach transations limit'), { response: respMoreMerged });
+      }
+      return respMoreMerged;
+    } catch (error) {
+      //  an error happend during load more, it means that it may have more,
+      //  however, some restriction made it stopped, so we call it again,
+      //  but this time, we use the eariliest date from the transactions
+      //  we retrieved so far as the toDate, so it might workaround this
+      //  problem.
+
+      debug(error);
+
+      //  if there is a `response` object attached to `error` object, that means
+      //  it's just reach the limit, and contains transations. Otherwise, it don't
+      //  have the transactions, a real error, then use previous `resp` instead.
+      const r = error.response || respBD;
+      //  find the earliest date as new 'to' date.
+      const earliest = Math.min(...(r.transactions.map(t => t.timestamp)));
+      const newTo = moment(earliest).format(moment.formats.default);
+
+      // Call self again
+      debug(`Call getTransactionsByDate() again with new 'to' date (${to} => ${newTo})`);
+      try {
+        const respBD2 = await this.getTransactionsByDate(
+          { ...r, form: respBD.form },
+          { ...account, link: Url.parse(r.url).path },
+          from,
+          newTo,
         );
-      });
+        //  concat more transactions
+        return mergeTransactions(r, respBD2, respBD.form);
+      } catch (err) {
+        //  cannot call it again, but we got some transactions at least,
+        //  so, just call it a success.
+        debug(err);
+        debug('getTransactionsByDate(): failed to call self again to load more');
+        return { ...r, form: respBD.form };
+      }
+    }
   }
 
   //  Utilities

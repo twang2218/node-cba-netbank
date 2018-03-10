@@ -53,7 +53,7 @@
     "prepare": "yarn build",
     "pretest": "yarn build && yarn eslint",
     "test": "jest --coverage --verbose",
-    "test-debug": "DEBUG=node-cba-netbank yarn test -- --runInBand",
+    "test-debug": "DEBUG=node-cba-netbank yarn test --runInBand",
     "test-coveralls": "yarn test-debug && yarn coveralls",
     "coveralls": "cat ./coverage/lcov.info | coveralls",
     "clean": "rm -rf ./log/* ./coverage ./dist"
