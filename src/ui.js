@@ -11,120 +11,116 @@ const inquirer = require('inquirer');
 const msgQuit = 'quit';
 const tagQuit = chalk.red('<Quit>');
 
+const monthsBefore = months =>
+  moment().subtract(months, 'months').format(moment.formats.default);
+
 /* eslint-disable class-methods-use-this */
 class UI {
   constructor() {
     this.accounts = [];
   }
 
-  start(argv) {
-    return new Promise((resolve) => {
-      //  check given credential
-      const questions = [];
+  async start(argv) {
+    //  check given credential
+    const questions = [];
 
-      //  client number
-      if (!argv.username) {
-        questions.push({
-          type: 'input',
-          name: 'username',
-          message: 'Client number:',
-          validate: input => /^\d{1,8}$/.test(input),
-        });
-      }
-
-      //  password
-      if (!argv.password) {
-        questions.push({
-          type: 'password',
-          name: 'password',
-          message: 'Password:',
-          validate: input => /^[\w\d-]{4,16}$/.test(input),
-        });
-      }
-
-      return resolve(questions.length > 0 ? inquirer.prompt(questions) : argv);
-    })
-      .then(c => this.logon(c))
-      .then(() => this.chooseAccountAndShowHistory(argv.months))
-      .catch((error) => {
-        debug(error);
-        console.log('Bye!');
+    //  client number
+    if (!argv.username) {
+      questions.push({
+        type: 'input',
+        name: 'username',
+        message: 'Client number:',
+        validate: input => /^\d{1,8}$/.test(input),
       });
+    }
+
+    //  password
+    if (!argv.password) {
+      questions.push({
+        type: 'password',
+        name: 'password',
+        message: 'Password:',
+        validate: input => /^[\w\d-]{4,16}$/.test(input),
+      });
+    }
+
+    const credential = questions.length > 0 ? await inquirer.prompt(questions) : argv;
+    try {
+      await this.logon(credential);
+      return await this.chooseAccountAndShowHistory(argv.months);
+    } catch (error) {
+      debug(error);
+      console.log('Bye!');
+      process.exit(0);
+      return null;
+    }
   }
 
-  logon(credential) {
+  async logon(credential) {
     this.api = new API();
-    console.log(`Logon as account ${credential.username} ...`);
-    return this.api
-      .logon(credential.username, credential.password)
-      .catch(() =>
-        inquirer
-          .prompt({
-            type: 'confirm',
-            name: 'tryagain',
-            message: 'Failed to logged in, try again?',
-          })
-          .then((answer) => {
-            if (answer.tryagain) {
-              console.log();
-              //  retry without give username/password, so user can give a new one to try.
-              return this.start(Object.assign({}, credential, { username: '', password: '' }));
-            }
-            throw new Error(msgQuit);
-          }))
-      .then((resp) => {
-        this.accounts = resp.accounts;
-        return this.accounts;
+
+    let resp;
+    try {
+      console.log(`Logon as account ${credential.username} ...`);
+      resp = await this.api.logon(credential.username, credential.password);
+    } catch (err) {
+      const answer = await inquirer.prompt({
+        type: 'confirm',
+        name: 'tryagain',
+        message: 'Failed to logged in, try again?',
       });
+
+      if (!answer.tryagain) {
+        throw new Error(msgQuit);
+      }
+      console.log();
+      //  retry without give username/password, so user can give a new one to try.
+      resp = await this.start({ ...credential, username: '', password: '' });
+    }
+
+    this.accounts = resp.accounts;
+    return this.accounts;
   }
 
-  chooseAccountAndShowHistory(months) {
-    return this.selectAccount()
-      .then(account =>
-        this.downloadHistoryAndShow(
-          account,
-          moment()
-            .subtract(months, 'months')
-            .format(moment.formats.default),
-        ))
-      .then(() => this.chooseAccountAndShowHistory(months));
+  async chooseAccountAndShowHistory(months) {
+    const account = await this.selectAccount();
+    await this.downloadHistoryAndShow(account, monthsBefore(months));
+    return this.chooseAccountAndShowHistory(months);
   }
 
-  selectAccount() {
-    return inquirer
-      .prompt({
-        type: 'list',
-        name: 'account',
-        message: 'Which account?',
-        choices: this.accounts.map(a => ({ name: Render.account(a), value: a })).concat([tagQuit]),
-      })
-      .then((answer) => {
-        if (answer.account === tagQuit) {
-          throw new Error(msgQuit);
-        }
-        const account = this.accounts.find(v => answer.account.number === v.number);
-        if (!account) {
-          throw new Error(msgQuit);
-        }
-        debug(`selectAccount(${Render.account(answer.account)}): found account ${Render.account(account)}`);
-        return account;
-      });
+  async selectAccount() {
+    const answer = await inquirer.prompt({
+      type: 'list',
+      name: 'account',
+      message: 'Which account?',
+      choices: this.accounts.map(a => ({ name: Render.account(a), value: a })).concat([tagQuit]),
+    });
+
+
+    if (answer.account === tagQuit) {
+      throw new Error(msgQuit);
+    }
+    const account = this.accounts.find(v => answer.account.number === v.number);
+    if (!account) {
+      throw new Error(msgQuit);
+    }
+    debug(`selectAccount(${Render.account(answer.account)}): found account ${Render.account(account)}`);
+    return account;
   }
 
-  downloadHistory(account, from, to) {
+  async downloadHistory(account, from, to) {
     console.log(`Downloading history [${from} => ${to}] ...`);
     return this.api.getTransactionHistory(account, from, to);
   }
 
-  downloadHistoryAndShow(account, from, to = moment().format(moment.formats.default)) {
-    return this.downloadHistory(account, from, to).then((history) => {
-      const allTransactions = history.pendings
-        .map(t => Object.assign({}, t, { pending: true }))
-        .concat(history.transactions);
-      console.log(Render.transactions(allTransactions));
-      console.log(`Total ${history.transactions.length} transactions and ${history.pendings.length} pending transactions.`);
-      return history;
-    });
+  async downloadHistoryAndShow(account, from, to = moment().format(moment.formats.default)) {
+    const history = await this.downloadHistory(account, from, to);
+    const allTransactions = history.pendings
+      .map(t => ({ ...t, pending: true }))
+      .concat(history.transactions);
+    console.log(Render.transactions(allTransactions));
+    console.log(`Total ${history.transactions.length} transactions and ${history.pendings.length} pending transactions.`);
+    return history;
   }
 }
 
