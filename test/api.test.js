@@ -37,7 +37,7 @@ let isLoggedIn = false;
 function mockWebsite() {
   return (
     nock('https://www.my.commbank.com.au')
-      .log(console.log)
+      .log(debug)
       //  Remove the query string
       .filteringPath(/\?.*$/g, '')
       //  Logon page
