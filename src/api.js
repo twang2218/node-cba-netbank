@@ -66,7 +66,7 @@ class API {
     //  retrieve post form and key for the given account
     return this.web
       .get(this.getUrl(account.link))
-      .then(parser.parseTransactionPage)
+      .then(parser.parseForm).then(parser.parseAccountListWithKeys)
       .then(resp => this.refreshBase(resp))
       .then((resp) => {
         const acc = Object.assign({}, account, { link: Url.parse(resp.url).path });
